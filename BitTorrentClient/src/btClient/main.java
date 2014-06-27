@@ -38,14 +38,15 @@ public class main {
 				torrentFile=new File(args[0]);
 				torrentBytes=getFileBytes(torrentFile);
 				System.out.println(torrentBytes);
+				//will change the name
 				Bencoder2 test=new Bencoder2();
 				//decode returns a map, in the description
 				metaInfo=(Map<ByteBuffer, Object>)test.decode(torrentBytes);
 				ByteBuffer url_bytes=(ByteBuffer) metaInfo.get(ByteBuffer.wrap(new byte[]{'a', 'n','n','o', 'u','n','c','e'}));
 		//this seems to do nothing:		
-		//		ByteBuffer info_bytes=(ByteBuffer) metaInfo.get(ByteBuffer.wrap(new byte[]{'i', 'n','f','o'}));
-		//		String info=new String(info_bytes.array(), "ASCII");
-//				System.out.println(info);
+			//	ByteBuffer info_bytes=(ByteBuffer) metaInfo.get(ByteBuffer.wrap(new byte[]{'i', 'n','f','o'}));
+			//	String info=new String(info_bytes.array(), "ASCII");
+			//	System.out.println(info);
 				
 				String urlAddress=new String(url_bytes.array(), "ASCII");
 				
