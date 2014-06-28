@@ -21,6 +21,7 @@ public class main {
 		File torrentFile;
 		byte [] torrentBytes;
 		byte [] SHA1_hash;
+		ByteBuffer info_hash; //for the tracker?
 		Map<ByteBuffer, Object> torrentMap; //bencoder gives us a Map for the url
 											//use this to get the url and the info map
 		Map<ByteBuffer, Object> torrentInfo; //the torrent Info's map. Use this to get the torrent
@@ -73,6 +74,8 @@ public class main {
 					/*don't know what to do with this*/
 						MessageDigest crypt=MessageDigest.getInstance("SHA-1");
 						crypt.update(info_bytes);
+						byte [] infoHash=crypt.digest();
+						info_hash=ByteBuffer.wrap(infoHash);
 					} catch (NoSuchAlgorithmException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
