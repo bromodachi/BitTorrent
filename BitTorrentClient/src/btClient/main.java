@@ -1,15 +1,15 @@
 package btClient;
 
-//import Bencoder2;
-
+import java.io.File;
+import java.io.IOException;
+import java.net.URL; //not sure if we need this one yet but let's see --Conrado, see my note below, -CW
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.io.*;
-import java.net.*; //not sure if we need this one yet but let's see
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.Map;
+//Use ctrl-shift-o or cmd-shift-o in eclipse to automatically import the necessary classes -CW
 
 public class main {
 	/**
@@ -19,92 +19,106 @@ public class main {
 	 */
 	public static void main(String[] args) throws IOException, BencodingException {
 		File torrentFile=null;
-		byte [] torrentBytes;
-		byte [] SHA1_hash;
-		ByteBuffer info_hash=null; //for the tracker?
-		ByteBuffer [] piecesHashValues;
-		Map<ByteBuffer, Object> torrentMap = null; //bencoder gives us a Map for the url
-											//use this to get the url and the info map
-		Map<ByteBuffer, Object> torrentInfo =null; //the torrent Info's map. Use this to get the torrent
-											//information
-		// TODO Auto-generated method stub
-		//blah blah blha this is a comment
-		//When compiled, we only allow two args so:
+		byte[] torrentBytes; 	//The raw bytes from the torrent file.
+		byte[] SHA1Hash;		//Not implemented yet.
+		ByteBuffer infoHash=null; //for the tracker?
+		ByteBuffer[] piecesHashValues;
+		Map<ByteBuffer, Object> torrentAnnounceMap = null; 	//bencoder gives us a Map for the url
+													//use this to get the url and the info map
+		Map<ByteBuffer, Object> torrentInfoMap =null; 	//the torrent Info's map. Use this to get the torrent
+													//information
+		
+		//The main method requires two command line arguments:
+		//The name of the torrent file to load, and the name to the resulting file to save-as.
 		if(args.length!=2){
 			System.out.println("Correct input: somefile.torrent picture.jpg");
 			return;
 		}
 		/*Are we only allowing pictures for now?*/
-		if(fileTorrentValid(args[0])){
+		//I don't think we need to limit it, but we can leave the method in for now. -CW
+		
+		//Check if the first argument is a torrent file and proceed
+		if(hasTorrentFileExtension(args[0])){
 			/*Thinking of using this info to create an object to use
 			 * later on. 
 			 */
-			//check 2nd arg...
-			if(fileExtensionChecker2ndArg(args[1])){
-				String path="";
-				System.out.println("Success");
-				//Create a file with the first arg, then get its bytes
+			
+			//Check if the second argument is a valid image file and proceed
+			if(hasImageFileExtension(args[1])){
+				System.out.println("Valid command line arguments.");
+				
+				//Create a file with the first argument
 				torrentFile=new File(args[0]);
-				/*Make sure the file exists and it's not a directory*/
+				
+				//Make sure the file exists and it's not a directory
 				if(torrentFile.exists() && !torrentFile.isDirectory()){
-					
+				
+				//Get all the bytes from the torrent file
 				torrentBytes=getFileBytes(torrentFile);
 				if(torrentBytes==null){
-					System.out.println("Couldn't load torrent file");
+					System.out.println("Couldn't load the torrent file.");
 					return;
 				}
+				
 				//Extract the maps from the torrent's bytes
+				//Two maps: torrentMap and torrentInfo
+				//torrentAnnounceMap has the tracker URL, creator, and creation date.
+				//torrentInfoMap has the rest of the torrent info dictionary: name, piece length, and pieces (SHA1 hashes).
 				try{
-				torrentMap=(Map<ByteBuffer, Object>)Bencoder2.decode(torrentBytes);
+				torrentAnnounceMap=(Map<ByteBuffer, Object>)Bencoder2.decode(torrentBytes); //decode returns object, needs casting
 				}catch(BencodingException e){
 					System.out.println("Error, couldn't decode the torrentmap");
 					return;
 				}
-				ByteBuffer url_bytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]{'a', 'n','n','o', 'u','n','c','e'}));
-				torrentInfo=(Map<ByteBuffer, Object>) torrentMap.get(ByteBuffer.wrap(new byte[]{'i', 'n','f','o'}));
-				//	Extracting the info keys
-				// Should check if we get a length or a file(latter is for 
-				// multiple files. Will we be downloading multiple files?)
-				ByteBuffer info_bytes=Bencoder2.getInfoBytes(torrentBytes);
-				ByteBuffer name_bytes=(ByteBuffer) torrentInfo.get(ByteBuffer.wrap(new byte[]{'n', 'a','m','e'}));
-				ByteBuffer pieces_bytes=(ByteBuffer) torrentInfo.get(ByteBuffer.wrap(new byte[]{'p', 'i','e','c','e','s'}));
-				ByteBuffer path_bytes=(ByteBuffer) torrentInfo.get(ByteBuffer.wrap(new byte[]{'p', 'a','t','h'}));
+				torrentInfoMap=(Map<ByteBuffer, Object>) torrentAnnounceMap.get(ByteBuffer.wrap(new byte[]{'i', 'n','f','o'}));
 				
-				ByteBuffer tracker_bytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]{'i', 'p'}));
-				if(tracker_bytes==null){
+				//Extracting the info keys
+				ByteBuffer urlBytes=(ByteBuffer) torrentAnnounceMap.get(ByteBuffer.wrap(new byte[]{'a', 'n','n','o', 'u','n','c','e'}));
+								
+				//Should check if we get a length or a file(latter is for 
+				//multiple files. Will we be downloading multiple files?)
+				//I assume we will need multiple file functionality in part 2. Not sure if we need to distinguish?-CW
+				
+				//Extracting the 'info' dictionary
+				ByteBuffer infoBytes=Bencoder2.getInfoBytes(torrentBytes);
+				ByteBuffer nameBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'n', 'a','m','e'}));
+				ByteBuffer piecesBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'i','e','c','e','s'}));
+				ByteBuffer pathBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'a','t','h'}));
+				
+				ByteBuffer trackerBytes=(ByteBuffer) torrentAnnounceMap.get(ByteBuffer.wrap(new byte[]{'i', 'p'}));
+				if(trackerBytes==null){
 					System.out.println("yes, the path is  null");
 				}
 				
 				/*The lengths:*/
-				System.out.println("testing: "+torrentInfo.get(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'})));
-				int infoLength=(int) torrentInfo.get(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'}));
-				int piecesLength=(int) torrentInfo.get(ByteBuffer.wrap(new byte[]{'p', 'i','e','c','e',' ','l', 'e','n','g','t','h'}));
+				System.out.println("testing: "+torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'})));
+				int infoLength=(int) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'}));
+				int piecesLength=(int) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'i','e','c','e',' ','l', 'e','n','g','t','h'}));
 				
 				/*Converting some of the bytes into string. However,
-				 * some seems to be crypted. */
-				String fileName=new String(name_bytes.array(), "ASCII");
-				String urlAddress=new String(url_bytes.array(), "ASCII");
-				String pieces=new String(pieces_bytes.array(), "ASCII");
-				String info_test=new String(info_bytes.array(), "ASCII");
-				if(path_bytes!=null){
+				 * some seems to be encrypted. */
+				String fileName=new String(nameBytes.array(), "ASCII");
+				String urlAddress=new String(urlBytes.array(), "ASCII");
+				String pieces=new String(piecesBytes.array(), "ASCII");
+				String info_test=new String(infoBytes.array(), "ASCII");
+				if(pathBytes!=null){
 					System.out.println("yes");
-					path=new String(path_bytes.array(), "ACII");
+					String path=new String(pathBytes.array(), "ACII");
 				}
 				try {
 					/*don't know what to do with this*/
 						MessageDigest crypt=MessageDigest.getInstance("SHA-1");
-						crypt.update(info_bytes);
-						byte [] infoHash=crypt.digest();
-						info_hash=ByteBuffer.wrap(infoHash);
+						crypt.update(infoBytes);
+						byte [] infoHashTemp=crypt.digest();
+						infoHash=ByteBuffer.wrap(infoHashTemp);
 					} catch (NoSuchAlgorithmException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				if(pieces.length()%20!=0){
 					System.out.println("Error, not a multiple of 20");
 					return;
 				}
-				byte piece_array []=pieces_bytes.array();
+				byte piece_array []=piecesBytes.array();
 				piecesHashValues=new ByteBuffer[piece_array.length/20];
 				for (int i=0; i<piece_array.length/20;i++){
 					byte []temp= new byte[20];
@@ -119,7 +133,7 @@ public class main {
 			URL add, String addURL, int infoLength,
 			int pieceLength)*/
 				TorrentInfo torrentInfoObject= new TorrentInfo(torrentFile, fileName,
-						torrentBytes, info_hash,
+						torrentBytes, infoHash,
 						piecesHashValues, addressFile,
 						urlAddress, infoLength, piecesLength);
 				System.out.println("testing: "+torrentInfoObject.getStringURLAddress());
@@ -137,19 +151,19 @@ public class main {
 				}
 				
 				else{
-				System.out.println("Couldn't load torrent file");
+				System.out.println("Couldn't load torrent file.");
 					return;
 				}
 				
 		
 			}
 			else{
-				System.out.println("Not a valid photo file");
+				System.out.println("Not a valid photo file.");
 			}
 			
 		}
 		else{
-			System.out.println("Not a valid Torrent file\n Exiting");
+			System.out.println("Not a valid Torrent file.\n Exiting");
 			return;
 		}
 
@@ -161,7 +175,7 @@ public class main {
 	 * @param fileName
 	 * @return true or false
 	 */
-	public static boolean fileExtensionChecker2ndArg(String fileName){
+	public static boolean hasImageFileExtension(String fileName){
 		//"JPG, PNG, & GIF Images", "jpg", "gif", "png"));
 		String extChecker=fileName.substring(fileName.lastIndexOf(".")
 				+1, fileName.length());
@@ -171,11 +185,12 @@ public class main {
 	}
 	
 	/**
-	 * Will check if a torrent file is valid. returns a boolean.
+	 * Will check if the file argument has the correct .torrent extension. Returns a boolean.
+	 * At the moment, it is case sensitive and will only approve an all-lowercase extension.
 	 * @param torrentFile
 	 * @return true or false
 	 */
-	public static boolean fileTorrentValid(String torrentFile){
+	public static boolean hasTorrentFileExtension(String torrentFile){
 		String torrentChecker=torrentFile.substring(torrentFile.lastIndexOf(".")
 				+1, torrentFile.length());
 		return torrentChecker.equals("torrent")==true;
@@ -196,7 +211,4 @@ public class main {
 		
 		
 	}
-	
-	//Eclipse git test, CW
-
 }
