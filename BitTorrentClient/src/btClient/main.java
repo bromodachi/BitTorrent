@@ -18,11 +18,14 @@ public class main {
 	 * @throws BencodingException 
 	 */
 	public static void main(String[] args) throws IOException, BencodingException {
+		boolean singleFile=true; //Flag for setting the download to expect a single file
 		File torrentFile=null;
+		int infoLength=0;
 		byte[] torrentBytes; 	//The raw bytes from the torrent file.
 		byte[] SHA1Hash;		//Not implemented yet.
 		ByteBuffer infoHash=null; //for the tracker?
 		ByteBuffer[] piecesHashValues;
+		ByteBuffer pathBytes=null;
 		Map<ByteBuffer, Object> torrentMap = null; 	//bencoder gives us a Map for the url
 															//use this to get the url and the info map
 		Map<ByteBuffer, Object> torrentInfoMap =null; 		//the torrent Info's map. Use this to get the torrent
@@ -80,6 +83,7 @@ public class main {
 				}
 				
 				//Get-by-key each value from the outer torrentMap
+				
 				//urlBytes (announce) - the URL of the tracker
 				ByteBuffer urlBytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]
 						{'a','n','n','o','u','n','c','e'}));
@@ -87,7 +91,7 @@ public class main {
 				ByteBuffer createdByBytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]
 						{'c','r','e','a','t','e','d',' ','b','y'}));
 				//creationDateBytes (creation date) - the date the torrent was created
-				ByteBuffer reationDateBytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]
+				int creationDate= (int)torrentMap.get(ByteBuffer.wrap(new byte[]
 						{'c','r','e','a','t','i','o','n',' ','d','a','t','e'}));
 				//info -This maps to a dictionary, with keys described below.
 				torrentInfoMap=(Map<ByteBuffer, Object>) torrentMap.get(ByteBuffer.wrap(new byte[]{'i', 'n','f','o'}));
@@ -95,28 +99,40 @@ public class main {
 				ByteBuffer infoBytes=Bencoder2.getInfoBytes(torrentBytes);
 				
 				//Get-by-key each value from the inner torrentInfoMap
-				//length or files
+				
 				//name- key maps to a string which is the suggested name to save the file/directory as (optional). 
-				ByteBuffer nameBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'n', 'a','m','e'}));
-				//name.utf-8
+				ByteBuffer nameBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]
+						{'n', 'a','m','e'}));
+				//name.utf-8 - not sure what this is for, but it is in our torrent file
+				ByteBuffer nameBytesUTF=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]
+						{'n', 'a','m','e','.','u','t','f','-','8'}));
 				//piece length
+				int piecesLength=(int) torrentInfoMap.get(ByteBuffer.wrap(new byte[]
+						{'p', 'i','e','c','e',' ','l', 'e','n','g','t','h'}));
 				//pieces- an n*20 length string of concatenated SHA1 hashes of each piece at the corresponding index.
-				ByteBuffer piecesBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'i','e','c','e','s'}));
+				ByteBuffer piecesBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]
+						{'p', 'i','e','c','e','s'}));
+				//length or files - There are two cases here, single file (k=length) and multiple files (k=files)
+				if(torrentInfoMap.containsKey(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'}))){
+					singleFile=true;
+					//length - The length of the file, in bytes.
+					infoLength=(int) torrentInfoMap.get(ByteBuffer.wrap(new byte[]
+							{'l', 'e','n','g','t','h'}));
+				}
+				else if(torrentInfoMap.containsKey(ByteBuffer.wrap(new byte[]{'f', 'i','l','e','s'}))){
+					singleFile=false;
+					//Path - A list of UTF-8 encoded strings corresponding to subdirectory names, last being filename.
+					pathBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]
+							{'p', 'a','t','h'}));
+				}
 				
 				
 				
-				//Path - A list of UTF-8 encoded strings corresponding to subdirectory names, last being filename.
-				//Used only in the case of a multiple-file download.
-				ByteBuffer pathBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'a','t','h'}));
-				
-				//Do we expect to find this key in the torrent file? -CW
+				//Do we expect to find this key in the torrent file? 
+				//I think this is for sending GET request to tracker -CW
+				//I'm going to comment this out for now. -CW
+				/*
 				ByteBuffer trackerBytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]{'i', 'p'}));
-				
-				//Should check if we get a length or a file(latter is for 
-				//multiple files. Will we be downloading multiple files?)
-				//I assume we will need multiple file functionality in part 2. Not sure if we need to distinguish now-CW
-					
-				
 				if(trackerBytes==null){
 					//An optional parameter giving the IP (or dns name) which this peer is at. 
 					//Generally used for the origin if it's on the same machine as the tracker.
@@ -124,20 +140,23 @@ public class main {
 					//Is this something we expect to find in the torrent file?
 					//I thought this was implemented in the tracker? -CW
 				}
-				
-				/*The lengths:*/
-				//length - The length of the file, in bytes.
-				System.out.println("testing: "+torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'})));
-				int infoLength=(int) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'}));
-				int piecesLength=(int) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'i','e','c','e',' ','l', 'e','n','g','t','h'}));
+				*/
+								
 				
 				/*Converting some of the bytes into string. However,
 				 * some seems to be encrypted. */
-				String fileName=new String(nameBytes.array(), "ASCII");
 				String urlAddress=new String(urlBytes.array(), "ASCII");
+				String author=new String(createdByBytes.array(), "ASCII");
+				//creationDate already an int.
+				//from info map:
+				String fileName=new String(nameBytes.array(), "ASCII");
+				String fileNameUTF=new String(nameBytesUTF.array(), "ASCII");
 				String pieces=new String(piecesBytes.array(), "ASCII");
+				
+				
+				
 				String info_test=new String(infoBytes.array(), "ASCII");
-				if(pathBytes!=null){
+				if(!singleFile){
 					System.out.println("yes");
 					String path=new String(pathBytes.array(), "ACII");
 				}
@@ -150,10 +169,7 @@ public class main {
 					} catch (NoSuchAlgorithmException e) {
 						e.printStackTrace();
 					}
-				if(pieces.length()%20!=0){
-					System.out.println("Error, not a multiple of 20");
-					return;
-				}
+				
 				byte piece_array []=piecesBytes.array();
 				piecesHashValues=new ByteBuffer[piece_array.length/20];
 				for (int i=0; i<piece_array.length/20;i++){
@@ -172,15 +188,23 @@ public class main {
 						torrentBytes, infoHash,
 						piecesHashValues, addressFile,
 						urlAddress, infoLength, piecesLength);
-				System.out.println("testing: "+torrentInfoObject.getStringURLAddress());
-			/*	System.out.println(fileName);
+				/*System.out.println("testing: "+torrentInfoObject.getStringURLAddress());
+				System.out.println(fileName);
 				System.out.println(infoLength);
 				System.out.println(piecesLength);
 				System.out.println(pieces.length()+ "pieces array length: "+piece_array.length);
-				System.out.println("Rest is gibberish:");
-				System.out.println(pieces);
-				System.out.println(path);
-				System.out.println("testing info: "+info_test);*/
+				
+
+				*/
+				
+				
+				
+				//Output for testing
+				
+				
+				System.out.println(torrentInfoObject);
+				
+				
 				CommunicationTracker establishConnection=new CommunicationTracker(torrentInfoObject);
 				establishConnection.establishConnection();
 				
