@@ -23,19 +23,23 @@ public class main {
 		byte[] SHA1Hash;		//Not implemented yet.
 		ByteBuffer infoHash=null; //for the tracker?
 		ByteBuffer[] piecesHashValues;
-		Map<ByteBuffer, Object> torrentAnnounceMap = null; 	//bencoder gives us a Map for the url
-													//use this to get the url and the info map
-		Map<ByteBuffer, Object> torrentInfoMap =null; 	//the torrent Info's map. Use this to get the torrent
-													//information
+		Map<ByteBuffer, Object> torrentMap = null; 	//bencoder gives us a Map for the url
+															//use this to get the url and the info map
+		Map<ByteBuffer, Object> torrentInfoMap =null; 		//the torrent Info's map. Use this to get the torrent
+															//information
+		//The keys of type ByteBuffer Because that is what Bencoder2 returns.
+		//ByteBuffer is used for fast low-level I/O, good for TCP/IP
 		
 		//The main method requires two command line arguments:
 		//The name of the torrent file to load, and the name to the resulting file to save-as.
 		if(args.length!=2){
-			System.out.println("Correct input: somefile.torrent picture.jpg");
+			System.out.println("Incorrect arguments. Need 'somefile.torrent' 'picture.jpg'");
 			return;
 		}
 		/*Are we only allowing pictures for now?*/
 		//I don't think we need to limit it, but we can leave the method in for now. -CW
+		
+		
 		
 		//Check if the first argument is a torrent file and proceed
 		if(hasTorrentFileExtension(args[0])){
@@ -45,7 +49,9 @@ public class main {
 			
 			//Check if the second argument is a valid image file and proceed
 			if(hasImageFileExtension(args[1])){
-				System.out.println("Valid command line arguments.");
+				System.out.println("Valid command line arguments:");
+				System.out.println("   " + args[0]);
+				System.out.println("   " + args[1] + "\n");
 				
 				//Create a file with the first argument
 				torrentFile=new File(args[0]);
@@ -60,37 +66,67 @@ public class main {
 					return;
 				}
 				
-				//Extract the maps from the torrent's bytes
-				//Two maps: torrentMap and torrentInfo
-				//torrentAnnounceMap has the tracker URL, creator, and creation date.
-				//torrentInfoMap has the rest of the torrent info dictionary: name, piece length, and pieces (SHA1 hashes).
+				//Note, there are two nested k-v maps: torrentMap (outer) and torrentInfoMap (inner)
+				//torrentMap has the tracker URL (announce), creator, creation date, and torrent info dictionary (torrentInfoMap).
+				//torrentInfoMap is the 'info' dictionary with the rest of the torrent info: 
+				//name (file or directory), length (int) xor files (list of file-maps), and pieces (SHA1 hashes).
+				
+				//Decode the torrent file (byte[]) to get the main torrentMap.
 				try{
-				torrentAnnounceMap=(Map<ByteBuffer, Object>)Bencoder2.decode(torrentBytes); //decode returns object, needs casting
+				torrentMap=(Map<ByteBuffer, Object>)Bencoder2.decode(torrentBytes); //decode() returns object, needs casting
 				}catch(BencodingException e){
 					System.out.println("Error, couldn't decode the torrentmap");
 					return;
 				}
-				torrentInfoMap=(Map<ByteBuffer, Object>) torrentAnnounceMap.get(ByteBuffer.wrap(new byte[]{'i', 'n','f','o'}));
 				
-				//Extracting the info keys
-				ByteBuffer urlBytes=(ByteBuffer) torrentAnnounceMap.get(ByteBuffer.wrap(new byte[]{'a', 'n','n','o', 'u','n','c','e'}));
-								
-				//Should check if we get a length or a file(latter is for 
-				//multiple files. Will we be downloading multiple files?)
-				//I assume we will need multiple file functionality in part 2. Not sure if we need to distinguish?-CW
-				
-				//Extracting the 'info' dictionary
+				//Get-by-key each value from the outer torrentMap
+				//urlBytes (announce) - the URL of the tracker
+				ByteBuffer urlBytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]
+						{'a','n','n','o','u','n','c','e'}));
+				//createdByBytes (created by) - the torrent author
+				ByteBuffer createdByBytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]
+						{'c','r','e','a','t','e','d',' ','b','y'}));
+				//creationDateBytes (creation date) - the date the torrent was created
+				ByteBuffer reationDateBytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]
+						{'c','r','e','a','t','i','o','n',' ','d','a','t','e'}));
+				//info -This maps to a dictionary, with keys described below.
+				torrentInfoMap=(Map<ByteBuffer, Object>) torrentMap.get(ByteBuffer.wrap(new byte[]{'i', 'n','f','o'}));
+				//A byteBuffer version of the same infoMap? What is this for? Do we need both parses?-CW
 				ByteBuffer infoBytes=Bencoder2.getInfoBytes(torrentBytes);
+				
+				//Get-by-key each value from the inner torrentInfoMap
+				//length or files
+				//name- key maps to a string which is the suggested name to save the file/directory as (optional). 
 				ByteBuffer nameBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'n', 'a','m','e'}));
+				//name.utf-8
+				//piece length
+				//pieces- an n*20 length string of concatenated SHA1 hashes of each piece at the corresponding index.
 				ByteBuffer piecesBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'i','e','c','e','s'}));
+				
+				
+				
+				//Path - A list of UTF-8 encoded strings corresponding to subdirectory names, last being filename.
+				//Used only in the case of a multiple-file download.
 				ByteBuffer pathBytes=(ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'a','t','h'}));
 				
-				ByteBuffer trackerBytes=(ByteBuffer) torrentAnnounceMap.get(ByteBuffer.wrap(new byte[]{'i', 'p'}));
+				//Do we expect to find this key in the torrent file? -CW
+				ByteBuffer trackerBytes=(ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[]{'i', 'p'}));
+				
+				//Should check if we get a length or a file(latter is for 
+				//multiple files. Will we be downloading multiple files?)
+				//I assume we will need multiple file functionality in part 2. Not sure if we need to distinguish now-CW
+					
+				
 				if(trackerBytes==null){
-					System.out.println("yes, the path is  null");
+					//An optional parameter giving the IP (or dns name) which this peer is at. 
+					//Generally used for the origin if it's on the same machine as the tracker.
+					System.out.println("IP key not found in torrent file.");
+					//Is this something we expect to find in the torrent file?
+					//I thought this was implemented in the tracker? -CW
 				}
 				
 				/*The lengths:*/
+				//length - The length of the file, in bytes.
 				System.out.println("testing: "+torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'})));
 				int infoLength=(int) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'l', 'e','n','g','t','h'}));
 				int piecesLength=(int) torrentInfoMap.get(ByteBuffer.wrap(new byte[]{'p', 'i','e','c','e',' ','l', 'e','n','g','t','h'}));
