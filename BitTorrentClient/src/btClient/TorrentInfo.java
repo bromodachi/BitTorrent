@@ -9,23 +9,26 @@ public class TorrentInfo {
 	
 	//Raw data - do we need this in this class? -CW
 	byte[] torrentBytes;
-	ByteBuffer info_hash;
+	ByteBuffer infoHash;
 	ByteBuffer[] rawPieces;
-	//byte[] SHA1_hash;
+	//byte[] SHA1Hash;
 	
 	//parsed data
-	boolean singleFile;
-	URL url;
-	String creator;
-	int creationDate;
-	int length;
-	ArrayList<Map> fileList;
-	String fileName;
-	String fileNameUTF;
-	int pieceLength;
+	boolean singleFile=true;
+	URL url=null;
+	String creator="a";
+	int creationDate=0;
+	int totalLength=0;
+	ArrayList<Map> fileList=null;
+	String fileName="a";
+	String fileNameUTF="a";
+	int pieceLength=0;
 
+	//No-arg constructor
+	public TorrentInfo(){
+	}
 	
-	//Single file constructor
+	//Constructor
 	public TorrentInfo(
 	boolean singleFile,
 	URL urlAddress,
@@ -34,7 +37,8 @@ public class TorrentInfo {
 	String fileName,
 	String fileNameUTF,
 	int pieceLength,
-	int length){
+	int length,
+	ArrayList<Map> fileList){
 		singleFile=true;
 		this.url=urlAddress;
 		this.creator=creator;
@@ -42,32 +46,10 @@ public class TorrentInfo {
 		this.fileName=fileName;
 		this.fileNameUTF=fileNameUTF;
 		this.pieceLength=pieceLength;
-		this.length=length;
-		this.fileList=null;
-		System.out.println("In TorrentInfo single-file constructor: "+fileName);	
+		this.totalLength=length;
+		this.fileList=fileList;	
 	}
 	
-	//Multiple file constructor
-	public TorrentInfo(
-	boolean singleFile,
-	URL urlAddress,
-	String creator,
-	int creationDate,
-	String fileName,
-	String fileNameUTF,
-	int pieceLength,
-	ArrayList<Map> fileList){
-		singleFile=false;
-		this.url=urlAddress;
-		this.creator=creator;
-		this.creationDate=creationDate;
-		this.fileName=fileName;
-		this.fileNameUTF=fileNameUTF;
-		this.pieceLength=pieceLength;
-		this.length=0;
-		this.fileList=fileList;
-		System.out.println("In TorrentInfo multi-file constructor: "+fileName);	
-	}
 	
 	//Getters
 	public boolean getSingleFile(){
@@ -83,7 +65,7 @@ public class TorrentInfo {
 		return creationDate;
 	}
 	public int getLength(){
-		return length;
+		return totalLength;
 	}
 	public ArrayList<Map> getFileList(){
 		return fileList;
@@ -101,16 +83,17 @@ public class TorrentInfo {
 	
 	public String toString(){
 		String info = "info";	
-		info=("File name: " + fileName + "\n" + "\n" +
+		info=("File name: " + fileName + "\n" +
 				"Url: " + url + "\n" +
 				"Creator: " + creator + "\n" +
 				"Creation date: " + creationDate + "\n" +
+				"Total length: " + totalLength + "\n" +
 				"File name: " + fileName + "\n" +
 				"File name UTF: " + fileNameUTF + "\n" +
 				"Piece length: " + pieceLength + "\n" +
 				"Single file: " + singleFile + "\n");
 		if(singleFile){
-			info.concat("File Length: " + length + "\n");
+			info.concat("File Length: " + totalLength + "\n");
 		}
 		else{
 			
