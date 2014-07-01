@@ -1,6 +1,9 @@
 package btClient;
 import java.io.IOException;
-import java.net.*;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 public class CommunicationTracker {
 	TorrentInfoRU torrentInfoRU;
@@ -18,9 +21,17 @@ public class CommunicationTracker {
 	}
 	
 	public void establishConnection(){
-		HttpURLConnection connection;
+		HttpURLConnection connection = null;
+		String fullUrl = torrentInfoRU.announce_url + "?info_hash=" + torrentInfoRU.info_hash;
+		try {
+			urlAddress = new URL(fullUrl);
+		} catch (MalformedURLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		try {
 			connection=(HttpURLConnection) urlAddress.openConnection();
+			connection.setDoOutput(true);
 			connection.setRequestMethod("GET");
 			responseCode=connection.getResponseCode();
 			System.out.println(responseCode);
@@ -29,6 +40,13 @@ public class CommunicationTracker {
 			System.out.println("Can't open the connection :c");
 		}
 		
+		try {
+			InputStream input =  connection.getInputStream();
+			System.out.println("success??");
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println("failure");
+		}
 		
 	}
 
