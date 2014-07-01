@@ -20,7 +20,7 @@ public class RUBTClient {
 	 */
 	public static void main(String[] args) throws IOException, BencodingException {
 		
-		TorrentInfo activeTorrent;
+		TorrentInfoRU activeTorrent;
 		
 		//Validate args
 		validateArgs(args);
@@ -29,7 +29,8 @@ public class RUBTClient {
 		byte[] torrentBytes=getFileBytes(args[0]);
 		
 		//Decode the torrent to produce it's TorrentInfo object.
-		activeTorrent=decodeTorrent(torrentBytes);
+		//activeTorrent=decodeTorrent(torrentBytes); 	//This is for our TorrentInfo class
+		activeTorrent= new TorrentInfoRU(torrentBytes); 		//This is for Rutgers' TorrentInfoRU class
 				
 		//Output for testing
 		System.out.println("Torrent object contents:\n" + activeTorrent);
@@ -75,7 +76,7 @@ public class RUBTClient {
 			System.err.println("Not a valid image file type, exiting program.");
 			System.exit(1);
 		}
-		System.out.println("Valid args.\n");
+		//System.out.println("Valid args.\n");
 	}//END validateArgs
 		
 	
@@ -105,6 +106,7 @@ public class RUBTClient {
 		}
 		return torrentBytes;
 	}//END getFileBytes
+
 	
 	/**
 	 * Decodes the torrent and creates a TorrentInfo object

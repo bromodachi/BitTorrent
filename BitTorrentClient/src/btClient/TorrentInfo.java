@@ -8,7 +8,7 @@ import java.util.Map;
 public class TorrentInfo {
 	
 	//Raw data - do we need this in this class? -CW
-	byte[] torrentBytes;
+	byte[] torrentBytes; //
 	ByteBuffer infoHash;
 	ByteBuffer[] rawPieces;
 	//byte[] SHA1Hash;
@@ -23,6 +23,18 @@ public class TorrentInfo {
 	String fileName="a";
 	String fileNameUTF="a";
 	int pieceLength=0;
+	
+	//Vars From new file on Sakai
+	//Merge these or delete these...
+	byte[] torrent_file_bytes; //A byte array containing the raw bytes of the torrent metainfo file.
+	Map<ByteBuffer,Object> torrent_file_map; //The base dictionary of the torrent metainfo file.
+	Map<ByteBuffer,Object> info_map; //The unbencoded info dictionary of the torrent metainfo file.
+	ByteBuffer info_hash; //The SHA-1 hash of the bencoded form of the info dictionary from the torrent metainfo file.
+	URL announce_url; //The base URL of the tracker for client scrapes.
+	int piece_length; //The default length of each piece in bytes.
+	String file_name; //The name of the file referenced in the torrent metainfo file.
+	int file_length; //The length of the file in bytes.
+	ByteBuffer[] piece_hashes; //The SHA-1 hashes of each piece of the file.
 
 	//No-arg constructor
 	public TorrentInfo(){

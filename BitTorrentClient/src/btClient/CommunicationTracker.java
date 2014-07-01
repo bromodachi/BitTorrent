@@ -3,15 +3,15 @@ import java.io.IOException;
 import java.net.*;
 
 public class CommunicationTracker {
-	TorrentInfo torrentInfo;
+	TorrentInfoRU torrentInfoRU;
 	String IPAddress;
 	int port;
 	URL urlAddress;
 	int responseCode;
 	
-	public CommunicationTracker(TorrentInfo passTheTorrentFile){
-		this.torrentInfo=passTheTorrentFile;
-		this.urlAddress=torrentInfo.getURL();
+	public CommunicationTracker(TorrentInfoRU passTheTorrentFile){
+		this.torrentInfoRU=passTheTorrentFile;
+		this.urlAddress=torrentInfoRU.announce_url;
 		this.IPAddress=urlAddress.getHost();
 		this.port=urlAddress.getPort();
 		
