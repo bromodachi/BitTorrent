@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.Random;
 import java.lang.*;
 
+/*TO DO:
+ * PORT MUST BE RANDOM*/
+
 public class CommunicationTracker {
 	TorrentInfoRU torrentInfoRU;
 	String IPAddress;
@@ -60,6 +63,8 @@ public class CommunicationTracker {
 	 * generates a  random peer to be used for the tracker
 	 * @return
 	 */
+	
+	
 	public byte[] getRandomID(){
 		byte [] random_peer=new byte[20];
 		Random random=new Random();
@@ -74,8 +79,9 @@ public class CommunicationTracker {
 		
 		String fullUrl = torrentInfoRU.announce_url.toString() +
 				"?info_hash=" + bytesToHex(torrentInfoRU.info_hash.array())+ 
-				"&peer_id="+bytesToHex(random_peer)+"&port="+ port
-				+"&uploaded="+uploaded +"&downloaded="+downloaded+"&left="+left;
+				"&peer_id="+bytesToHex(random_peer)+"&port="+ 6681
+				+"&uploaded="+uploaded +"&downloaded="+downloaded+"&left="+left
+				+"&event="+"started";
 		
 		try {
 			urlAddress = new URL(fullUrl);
