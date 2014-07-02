@@ -8,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,7 @@ public class CommunicationTracker {
 	int interval;
 	int complete;
 	int incomplete;
-	List <Map<ByteBuffer, Object>>peers=null;
+	ArrayList <Map<ByteBuffer, Object>>peers;
 	
 	public CommunicationTracker(TorrentInfoRU passTheTorrentFile){
 		this.torrentInfoRU=passTheTorrentFile;
@@ -59,7 +60,7 @@ public class CommunicationTracker {
 	 * generates a  random peer to be used for the tracker
 	 * @return
 	 */
-	public byte[] getRandomPeer(){
+	public byte[] getRandomID(){
 		byte [] random_peer=new byte[20];
 		Random random=new Random();
 		random.nextBytes(random_peer);
@@ -69,11 +70,11 @@ public class CommunicationTracker {
 		HttpURLConnection connection = null;
 		String line;
 		
-		byte [] random_peer=getRandomPeer();
+		byte [] random_peer=getRandomID();
 		
 		String fullUrl = torrentInfoRU.announce_url.toString() +
 				"?info_hash=" + bytesToHex(torrentInfoRU.info_hash.array())+ 
-				"&peer_id="+bytesToHex(random_peer)+"&port="+port
+				"&peer_id="+bytesToHex(random_peer)+"&port="+ port
 				+"&uploaded="+uploaded +"&downloaded="+downloaded+"&left="+left;
 		
 		try {
@@ -87,7 +88,7 @@ public class CommunicationTracker {
 			connection.setDoOutput(true);
 			connection.setRequestMethod("GET");
 			responseCode=connection.getResponseCode();
-			System.out.println("Response code is: "+responseCode);
+			System.out.println("Response code is: "+responseCode+"Url address: "+fullUrl);
 			DataInputStream reader=new DataInputStream(connection.getInputStream());
 			byte [] response=new byte[connection.getContentLength()];
 			
@@ -115,15 +116,35 @@ public class CommunicationTracker {
 					{'c','o','m','p','l','e','t','e'}));
 			incomplete=(int)responseMap.get(ByteBuffer.wrap(new byte[]
 					{'i','n','c','o','m','p','l','e','t','e'}));
+			ByteBuffer peer_id=(ByteBuffer)responseMap.get(ByteBuffer.wrap(new byte[]
+					{'p','e','e','r','_','i','d'}));
 			System.out.println("Interval is: "+interval +"\n"+"Complete: "+complete+"\nIncomplete: "+incomplete);
-			peers=(List<Map<ByteBuffer, Object>>)responseMap.get(ByteBuffer.wrap(new byte[]
+			
+			peers=(ArrayList<Map<ByteBuffer, Object>>)responseMap.get(ByteBuffer.wrap(new byte[]
 					{'p','e','e','r','s'}));
+			
+			//String pieces=new String(peer_id.array(), "ASCII");
 			if(peers==null){
 				System.out.println("Wtf am I null?");
 				return;
 			}
 			if(peers.isEmpty()){
-				System.out.println("Wtf am I empty?");
+				System.out.println("No peers");
+			}
+			if(!peers.isEmpty()){
+				System.out.println("Wtf am I not empty?");
+			}
+			for(Map<ByteBuffer, Object> temp:peers){
+				ByteBuffer peer_id2=(ByteBuffer) temp.get(ByteBuffer.wrap(new byte[]
+						{'p', 'e','e','r',' ','i','d'}));
+				int peer_id3=(int) temp.get(ByteBuffer.wrap(new byte[]
+						{'p', 'o','r','t'}));
+				
+				String blah=new String(peer_id2.array(), "ASCII");
+				ByteBuffer ip=(ByteBuffer) temp.get(ByteBuffer.wrap(new byte[]
+						{'i', 'p'}));
+				String ipS=new String(ip.array(), "ASCII");
+				System.out.println("peer id is: "+blah+"IP is: "+ipS+ "port: "+peer_id3);
 			}
 			
 			/*peer_bytes=(ByteBuffer) responseMap.get(ByteBuffer.wrap(new byte[]
@@ -141,13 +162,7 @@ public class CommunicationTracker {
 			System.out.println("Can't open the connection :c");
 		}
 		
-		try {
-			InputStream input =  connection.getInputStream();
-			System.out.println("success??");
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.out.println("failure");
-		}
+		
 		
 	}
 
