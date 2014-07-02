@@ -16,7 +16,8 @@ import java.util.Random;
 import java.lang.*;
 
 /*TO DO:
- * PORT MUST BE RANDOM*/
+ * PORT MUST BE RANDOM
+ * wireshark for testing*/
 
 public class CommunicationTracker {
 	TorrentInfoRU torrentInfoRU;
@@ -27,6 +28,8 @@ public class CommunicationTracker {
 	Map<ByteBuffer, Object> responseMap;
 	ByteBuffer peer_bytes;
 	ByteBuffer failure_bytes;
+	/*perhaps change the one later*/
+	public static ArrayList<Peers> peersList;
 	
 	/**/
 	int uploaded=0;
@@ -72,6 +75,7 @@ public class CommunicationTracker {
 		return random_peer;
 	}
 	public void establishConnection(){
+		System.out.println(torrentInfoRU.file_name);
 		HttpURLConnection connection = null;
 		String line;
 		
@@ -143,14 +147,19 @@ public class CommunicationTracker {
 			for(Map<ByteBuffer, Object> temp:peers){
 				ByteBuffer peer_id2=(ByteBuffer) temp.get(ByteBuffer.wrap(new byte[]
 						{'p', 'e','e','r',' ','i','d'}));
-				int peer_id3=(int) temp.get(ByteBuffer.wrap(new byte[]
+				int peer_port=(int) temp.get(ByteBuffer.wrap(new byte[]
 						{'p', 'o','r','t'}));
 				
-				String blah=new String(peer_id2.array(), "ASCII");
+				String peerID=new String(peer_id2.array(), "ASCII");
 				ByteBuffer ip=(ByteBuffer) temp.get(ByteBuffer.wrap(new byte[]
 						{'i', 'p'}));
 				String ipS=new String(ip.array(), "ASCII");
-				System.out.println("peer id is: "+blah+"IP is: "+ipS+ "port: "+peer_id3);
+				System.out.println("peer id is: "+peerID+"\nIP is: "+ipS+ "\nport: "+peer_port);
+				peersList=new ArrayList<Peers>(peers.size());
+				/*(int interval, int complete, int incomplete,
+			String IP, String peer_id, int port)*/
+				Peers temp_peer=new Peers(interval, complete, incomplete, ipS, peerID, peer_port);
+				peersList.add(temp_peer);
 			}
 			
 			/*peer_bytes=(ByteBuffer) responseMap.get(ByteBuffer.wrap(new byte[]
