@@ -92,19 +92,69 @@ public class Peer {
 	}
 
 	/* =============== Methods ==================== */
-
-	public void establishConnection(String info_hash, String clientID) throws UnknownHostException, IOException {
+	/**
+	 * Establishes a connection with the peer by creating a socket to the peer's
+	 * IP address and port number then creates a handshake message from the
+	 * given info_hash and clientID
+	 * 
+	 * @param info_hash
+	 *            info_hash of from the torrent file (must match that of the
+	 *            peer's)
+	 * @param clientID
+	 *            psuedorandom peer_ID identifying the client (not this peer)
+	 * @throws UnknownHostException
+	 * @throws IOException
+	 */
+	public void establishConnection(ByteBuffer info_hash, ByteBuffer clientID)
+			throws UnknownHostException, IOException {
 		connection = new Socket(IP, port);
 		inputStream = connection.getInputStream();
 		outputStream = connection.getOutputStream();
-		
+
 		ByteBuffer handshake = ByteBuffer.allocate(48);
-		handshake.put(BtUtils.p2pHandshakeHeader);	
-		handshake.put(info_hash.getBytes("UTF-8"));
-		handshake.put(clientID.getBytes("UTF-8"));
-		
-		outputStream.write(handshake.array());
+		handshake.put(BtUtils.p2pHandshakeHeader);
+		System.err.println(handshake.position());
+		info_hash.rewind();
+		clientID.rewind();
+		while (info_hash.position() < info_hash.capacity()) {
+			System.err.println(handshake.position());
+			handshake.put(info_hash.get());
+		}
+		while (handshake.position() < handshake.capacity()) {
+			System.err.println(handshake.position());
+			handshake.put(clientID.get());
+		}
+		if (handshake.position() == handshake.capacity()) {
+			System.err.println("position == capacity");
+		} else {
+			System.err.println("not ==");
+		}
+
+		handshake.rewind();
+		byte[] bytes = new byte[BtUtils.p2pHandshakeLength];
+		handshake.get(bytes, 0, handshake.capacity());
+
+		outputStream.write(bytes);
 
 	}
+	
+	public void sendKeepAlive() throws IOException{
+		outputStream.write(BtUtils.KEEP_ALIVE);
+	}
+	
+	public void sendChoke(){
+		
+	}
+	
+	public void sendunchoke(){
+		
+	}
 
+	public void sendInterested(){
+		
+	}
+	
+	public void sendUninterested(){
+		
+	}
 }

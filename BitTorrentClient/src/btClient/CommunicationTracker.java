@@ -176,6 +176,7 @@ public class CommunicationTracker {
 				Peer temp_peer = new Peer(interval, complete, incomplete,
 						ipS, peerID, peer_port);
 				peersList.add(temp_peer);
+				
 			}
 
 			/*
