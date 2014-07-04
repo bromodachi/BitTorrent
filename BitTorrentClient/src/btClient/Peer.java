@@ -14,7 +14,7 @@ public class Peer {
 	private InputStream inputStream;
 	private OutputStream outputStream;
 
-	public Peer(int interval, int complete, int incomplete, String IP,
+	public Peer(String IP,
 			String peer_id, int port) {
 		this.interval = interval;
 		this.complete = complete;

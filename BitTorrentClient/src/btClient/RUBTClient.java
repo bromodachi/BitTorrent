@@ -3,6 +3,7 @@ package btClient;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL; //not sure if we need this one yet but let's see --Conrado, see my note below, -CW
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,8 +37,17 @@ public class RUBTClient {
 		System.out.println("Torrent object contents:\n" + activeTorrent);
 		
 		//Step 3 - Send an HTTP GET request to the tracker 
-		CommunicationTracker establishConnection=new CommunicationTracker(activeTorrent);
-		establishConnection.establishConnection();
+		CommunicationTracker communicateTracker=new CommunicationTracker(activeTorrent);
+		communicateTracker.CommunicateWithTracker();
+		
+		//Step 4 - Connect with the Peer.
+		//Since we're only connecting one, this is fine, but later on, we need a better way
+		//to access the peers(maybe?)
+		try{communicateTracker.getPeersList().get(0)
+		.establishConnection(activeTorrent.info_hash, communicateTracker.getClientID());;
+		}catch(Exception e){
+			
+		}
 		
 	}//END MAIN
 	

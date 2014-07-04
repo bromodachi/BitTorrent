@@ -40,10 +40,13 @@ public class CommunicationTracker {
 	int left=0;
 	/**/
 	
+	
+	ArrayList <Map<ByteBuffer, Object>>peers;
+	/*Below is client information*/
+	ByteBuffer clientID;
 	int interval;
 	int complete;
 	int incomplete;
-	ArrayList <Map<ByteBuffer, Object>>peers;
 	
 	public CommunicationTracker(TorrentInfoRU passTheTorrentFile){
 		this.torrentInfoRU=passTheTorrentFile;
@@ -52,22 +55,29 @@ public class CommunicationTracker {
 		this.port=urlAddress.getPort();
 		
 	}
-	
-	final protected static String hexArray = "0123456789ABCDEF";
-	public static String bytesToHex(byte[] bytes) {
-	    StringBuilder finalHex=new StringBuilder(bytes.length *2);
-	    for (byte b : bytes) {
-	        finalHex.append('%').append(hexArray.charAt((b & 0xF0) >> 4))
-	        .append(hexArray.charAt((b & 0x0F)));
-	    }
-	    
-	    
-	    return finalHex.toString();
+	public ByteBuffer getClientID(){
+		return clientID;
 	}
+	public TorrentInfoRU getTorrent(){
+		return torrentInfoRU;
+	}
+	public ArrayList<Peer> getPeersList(){
+		return peersList;
+	}
+	public int getInterval(){
+		return interval;
+	}
+	public int complete(){
+		return complete;
+	}
+	public int incomplete(){
+		return incomplete;
+	}
+	
 	
 	/**
 	 * generates a  random peer to be used for the tracker
-	 * @return
+	 * @return an array of bytes
 	 */
 	
 	
@@ -92,14 +102,14 @@ public class CommunicationTracker {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void establishConnection(){
-		System.out.println("checking something: "+torrentInfoRU.info_hash.array());
+	public void CommunicateWithTracker(){
+		
 		HttpURLConnection connection = null;
 	
 		
 		byte [] random_peer=getRandomID();
 		
-		System.out.println(torrentInfoRU.info_hash);
+		
 		/*making the string fullUrl*/
 		String fullUrl="";
 		try {
@@ -126,20 +136,18 @@ public class CommunicationTracker {
 			connection=(HttpURLConnection) urlAddress.openConnection();
 			connection.setDoOutput(true);
 			connection.setRequestMethod("GET");
-			String message=connection.getResponseMessage();
-			System.out.println("Response message is: "+message);
+	//		String message=connection.getResponseMessage();
+	//		System.out.println("Response message is: "+message);
 			responseCode=connection.getResponseCode();
-			System.out.println("Response code is: "+responseCode+"Url address: "+fullUrl+
-					"\nContent length is: "+connection.getContentLength());
 			DataInputStream reader=new DataInputStream(connection.getInputStream());
 	
 			byte [] response=new byte[connection.getContentLength()];
-			System.out.println(response);
+	//		System.out.println(response);
 			reader.readFully(response);
 			reader.close();
 			/*end of http connection*/
 			
-			System.out.println(response+" "+connection.getContentLength());
+	//		System.out.println(response+" "+connection.getContentLength());
 			try {
 				responseMap=(Map<ByteBuffer, Object>)Bencoder2.decode(response);
 			} catch (BencodingException e) {
@@ -163,7 +171,7 @@ public class CommunicationTracker {
 					{'i','n','c','o','m','p','l','e','t','e'}));
 			
 			
-			System.out.println("Interval is: "+interval +"\n"+"Complete: "+complete+"\nIncomplete: "+incomplete);
+		//	System.out.println("Interval is: "+interval +"\n"+"Complete: "+complete+"\nIncomplete: "+incomplete);
 			
 			peers=(ArrayList<Map<ByteBuffer, Object>>)responseMap.get(ByteBuffer.wrap(new byte[]
 					{'p','e','e','r','s'}));
@@ -173,17 +181,10 @@ public class CommunicationTracker {
 			//String pieces=new String(peer_id.array(), "ASCII");
 			if(peers==null){
 				//real error message later
-				System.out.println("Wtf am I null?");
+				System.out.println("Peers were not extracted");
 				return;
 			}
-			if(peers.isEmpty()){
-				System.out.println("No peers");
-			}
-			if(!peers.isEmpty()){
-				System.out.println(" am I not empty?");
-			}
 			peersList=new ArrayList<Peer>(peers.size());
-			System.out.println("Size of the peers: "+peers.size());
 			for(Map<ByteBuffer, Object> temp:peers){
 				ByteBuffer peer_id2=(ByteBuffer) temp.get(ByteBuffer.wrap(new byte[]
 						{'p', 'e','e','r',' ','i','d'}));
@@ -196,23 +197,10 @@ public class CommunicationTracker {
 				String ipS=new String(ip.array(), "ASCII");
 				System.out.println("peer id is: "+peerID+"\nIP is: "+ipS+ "\nport: "+peer_port);
 				
-				/*(int interval, int complete, int incomplete,
-			String IP, String peer_id, int port)*/
-				Peer temp_peer=new Peer(interval, complete, incomplete, ipS, peerID, peer_port);
+				Peer temp_peer=new Peer(ipS, peerID, peer_port);
 				peersList.add(temp_peer);
 			}
-			
-			
-			/*peer_bytes=(ByteBuffer) responseMap.get(ByteBuffer.wrap(new byte[]
-					{'p', 'e','e','r','s'}));
-			String peerID=new String(peer_bytes.array(), "ASCII");
-			/*BufferedReader read=new BufferedReader(new InputStreamReader(connection.getInputStream()));
-			StringBuffer response = new StringBuffer();
-			while(((line=read.readLine())!=null)){
-				response.append(line);
-			}
-			read.close();*/
-		//	System.out.println(interval);
+			clientID= ByteBuffer.wrap(random_peer);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.out.println("Can't open the connection :c");
