@@ -4,10 +4,10 @@ public class BtUtils {
 	/**
 	 * Byte array representation of the Bit Torrent protocol handshake header
 	 */
-	public static final byte[] p2pHandshakeHeader = { (byte) 0x13, 'B', 'i', 't',
-			'T', 'o', 'r', 'r', 'e', 'n', 't', ' ', 'p', 'r', 'o', 't', 'o',
-			'c', 'o', 'l', (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0,
-			(byte) 0, (byte) 0, (byte) 0 };
+	public static final byte[] p2pHandshakeHeader = { (byte) 0x13, 'B', 'i',
+			't', 'T', 'o', 'r', 'r', 'e', 'n', 't', ' ', 'p', 'r', 'o', 't',
+			'o', 'c', 'o', 'l', (byte) 0, (byte) 0, (byte) 0, (byte) 0,
+			(byte) 0, (byte) 0, (byte) 0, (byte) 0 };
 	/**
 	 * number of bytes in the complete (header + info_hash + peer_id) Bit
 	 * torrent protocol handshake
@@ -69,11 +69,20 @@ public class BtUtils {
 	 * BitTorrent length prefix for piece message
 	 */
 	public static final int PIECE_LENGTH_PREFIX = 9;
-	
+
 	public static final int PREFIX_LENGTH = 4;
 	/**
 	 * BitTorrent keep alive message as a byte array
 	 */
-	public static final byte [] KEEP_ALIVE = {0x00, 0x00, 0x00, 0x00};
-	
+	public static final byte[] KEEP_ALIVE = { 0x00, 0x00, 0x00, 0x00 };
+	/**
+	 * Length of a SHA-1 hash for the BitTorrent protocol
+	 */
+	public static final int INFO_HASH_LENGTH = 20;
+	/**
+	 * Offset for the start of the BitTorrent info_hash sent in a handshake
+	 * message
+	 */
+	public static final int INFO_HASH_OFFSET = 28;
+
 }

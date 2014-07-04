@@ -14,8 +14,7 @@ public class Peer {
 	private InputStream inputStream;
 	private OutputStream outputStream;
 
-	public Peer(String IP,
-			String peer_id, int port) {
+	public Peer(String IP, String peer_id, int port) {
 		this.IP = IP;
 		this.peer_id = peer_id;
 		this.port = port;
@@ -110,21 +109,13 @@ public class Peer {
 
 		ByteBuffer handshake = ByteBuffer.allocate(BtUtils.p2pHandshakeLength);
 		handshake.put(BtUtils.p2pHandshakeHeader);
-		System.err.println(handshake.position());
 		info_hash.rewind();
 		clientID.rewind();
 		while (info_hash.position() < info_hash.capacity()) {
-			System.err.println(handshake.position());
 			handshake.put(info_hash.get());
 		}
 		while (clientID.position() < clientID.capacity()) {
-			System.err.println(handshake.position());
 			handshake.put(clientID.get());
-		}
-		if (handshake.position() == handshake.capacity()) {
-			System.err.println("position == capacity");
-		} else {
-			System.err.println("not ==");
 		}
 
 		handshake.rewind();
@@ -132,40 +123,33 @@ public class Peer {
 		handshake.get(bytes, 0, handshake.capacity());
 
 		outputStream.write(bytes);
-		/*get the response*/
-		byte [] response=new byte[handshake.capacity()];
+		/* get the response */
+		byte[] response = new byte[handshake.capacity()];
 		inputStream.read(response);
-		/*verify that it's the same info_hash*/
-		if(ifSameHash(info_hash.array(), response)){
-			 sendInterested();
+		/* verify that it's the same info_hash */
+		if (ifSameHash(info_hash.array(), response)) {
+			System.out.println("info hash verified");
+			sendInterested();
 		}
-		
-		
-
 	}
-	
+
 	/**
-	 * Just verifies that the info hash are the same. If not, we should drop
-	 * the connection
+	 * Just verifies that the info hash are the same. If not, we should drop the
+	 * connection
 	 * 
-	 * @return boolean
+	 * @return boolean True if remote and local peer have the same info_hash,
+	 *         otherwise false
 	 */
-	public boolean ifSameHash(byte [] info_hash, byte[] response_info_hash){
-		int index=28;
-		int indexHash=0;
-		while(true){
-			if(indexHash==20){
-				break;
+	public boolean ifSameHash(byte[] info_hash, byte[] response_info_hash) {
+		int index = BtUtils.INFO_HASH_OFFSET;
+		int indexHash = 0;
+		while (info_hash[indexHash++] == response_info_hash[index++]) {
+			if (indexHash == BtUtils.INFO_HASH_LENGTH) {
+				return true;
 			}
-			if(info_hash[indexHash]!=response_info_hash[index]){
-				System.out.println("Verfication fail...connection will drop now");
-				return false;
-			}
-			index++;
-			indexHash++;
 		}
-		return true;
-		
+		System.out.println("Verfication fail...connection will drop now");
+		return false;
 	}
 
 	/**
