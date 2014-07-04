@@ -13,12 +13,14 @@ public class Peer {
 	private Socket connection;
 	private InputStream inputStream;
 	private OutputStream outputStream;
+	private boolean choked;
 
 	public Peer(String IP, String peer_id, int port) {
 		this.IP = IP;
 		this.peer_id = peer_id;
 		this.port = port;
 		this.connection = null;
+		choked = false;
 	}
 
 	/* ================= Getters =================== */
@@ -62,6 +64,10 @@ public class Peer {
 		return outputStream;
 	}
 
+	public boolean isChoked() {
+		return choked;
+	}
+
 	/* =============== Setters ================ */
 	public void setInterval(int interval) {
 		this.interval = interval;
@@ -85,6 +91,10 @@ public class Peer {
 
 	public void setPeer_id(String peer_id) {
 		this.peer_id = peer_id;
+	}
+
+	public void setChoked(boolean choked) {
+		this.choked = choked;
 	}
 
 	/* =============== Methods ==================== */
@@ -124,10 +134,10 @@ public class Peer {
 
 		outputStream.write(bytes);
 		/* get the response */
-		byte[] response = new byte[handshake.capacity()];
+		byte[] response = new byte[BtUtils.p2pHandshakeLength];
 		inputStream.read(response);
 		/* verify that it's the same info_hash */
-		if (ifSameHash(info_hash.array(), response)) {
+		if (isSameHash(info_hash.array(), response)) {
 			System.out.println("info hash verified");
 			sendInterested();
 		}
@@ -140,7 +150,7 @@ public class Peer {
 	 * @return boolean True if remote and local peer have the same info_hash,
 	 *         otherwise false
 	 */
-	public boolean ifSameHash(byte[] info_hash, byte[] response_info_hash) {
+	public boolean isSameHash(byte[] info_hash, byte[] response_info_hash) {
 		int index = BtUtils.INFO_HASH_OFFSET;
 		int indexHash = 0;
 		while (info_hash[indexHash++] == response_info_hash[index++]) {
@@ -148,7 +158,8 @@ public class Peer {
 				return true;
 			}
 		}
-		System.out.println("Verfication fail...connection will drop now");
+		System.err
+				.println("Verfication fail (info_hash mismatch)...connection will drop now");
 		return false;
 	}
 
@@ -281,4 +292,64 @@ public class Peer {
 		outputStream.write(message.array());
 	}
 
+	/**
+	 * Reads a message form the peer
+	 * 
+	 * @return null if no bytes were read or if there were an incorrect number
+	 *         of byte representing the length_prefix. Otherwise returns the
+	 *         message (without its length prefix, message_id is in index = 0)
+	 * @throws IOException
+	 */
+	public byte[] getMessage() throws IOException {
+		byte[] length_prefix = new byte[BtUtils.PREFIX_LENGTH];
+		int bytesRead = inputStream.read(length_prefix, 0,
+				BtUtils.PREFIX_LENGTH);
+		if (bytesRead == 0) {
+			return null;
+		} else if (bytesRead != 4) {
+			System.err
+					.println("Failed to read message length prefix: incorrect number of bytes");
+			return null;
+		}
+		int length = ByteBuffer.wrap(length_prefix).getInt();
+		byte[] message = new byte[length];
+		inputStream.read(message);
+		return message;
+	}
+
+	/**
+	 * Identifies which message type the given message belongs to
+	 * 
+	 * @param message
+	 *            message to be identified
+	 */
+	public void identifyMessage(byte[] message) {
+		if (message == null) {
+			System.err.println("Failed to identify message: message is null");
+			return;
+		}
+		switch (message[0]) {
+		case BtUtils.CHOKE_ID:
+			// choke
+			break;
+		case BtUtils.UNCHOKE_ID:
+			// unchoke
+			break;
+		case BtUtils.INTERESTED_ID:
+			// interested
+			break;
+		case BtUtils.UNINTERESTED_ID:
+			// uninterested
+			break;
+		case BtUtils.HAVE_ID:
+			// have
+			break;
+		case BtUtils.REQUEST_ID:
+			// request
+			break;
+		case BtUtils.PIECE_ID:
+			// piece
+			break;
+		}
+	}
 }

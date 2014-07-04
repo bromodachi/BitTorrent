@@ -16,31 +16,31 @@ public class BtUtils {
 	/**
 	 * BitTorrent message id for choke
 	 */
-	public static final int CHOKE_ID = 0;
+	public static final byte CHOKE_ID = 0;
 	/**
 	 * BitTorrent message id for unchoke
 	 */
-	public static final int UNCHOKE_ID = 1;
+	public static final byte UNCHOKE_ID = 1;
 	/**
 	 * BitTorrent message id for interested
 	 */
-	public static final int INTERESTED_ID = 2;
+	public static final byte INTERESTED_ID = 2;
 	/**
 	 * BitTorrent message id for uninterested
 	 */
-	public static final int UNINTERESTED_ID = 3;
+	public static final byte UNINTERESTED_ID = 3;
 	/**
 	 * BitTorrent message id for have
 	 */
-	public static final int HAVE_ID = 4;
+	public static final byte HAVE_ID = 4;
 	/**
 	 * BitTorrent message id for request
 	 */
-	public static final int REQUEST_ID = 6;
+	public static final byte REQUEST_ID = 6;
 	/**
 	 * BitTorrent message id for piece
 	 */
-	public static final int PIECE_ID = 7;
+	public static final byte PIECE_ID = 7;
 	/**
 	 * BitTorrent length prefix for choke message
 	 */
@@ -69,7 +69,9 @@ public class BtUtils {
 	 * BitTorrent length prefix for piece message
 	 */
 	public static final int PIECE_LENGTH_PREFIX = 9;
-
+	/**
+	 * The number of bytes that comprise the BitTorrent protocol length prefix
+	 */
 	public static final int PREFIX_LENGTH = 4;
 	/**
 	 * BitTorrent keep alive message as a byte array
@@ -84,5 +86,9 @@ public class BtUtils {
 	 * message
 	 */
 	public static final int INFO_HASH_OFFSET = 28;
+	/**
+	 * 
+	 */
+	public static final byte [] MESSAGE_READ_ERROR = "failed to read message".getBytes();
 
 }
