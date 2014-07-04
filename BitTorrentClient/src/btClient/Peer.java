@@ -16,9 +16,6 @@ public class Peer {
 
 	public Peer(String IP,
 			String peer_id, int port) {
-		this.interval = interval;
-		this.complete = complete;
-		this.incomplete = incomplete;
 		this.IP = IP;
 		this.peer_id = peer_id;
 		this.port = port;
@@ -135,7 +132,40 @@ public class Peer {
 		handshake.get(bytes, 0, handshake.capacity());
 
 		outputStream.write(bytes);
+		/*get the response*/
+		byte [] response=new byte[handshake.capacity()];
+		inputStream.read(response);
+		/*verify that it's the same info_hash*/
+		if(ifSameHash(info_hash.array(), response)){
+			 sendInterested();
+		}
+		
+		
 
+	}
+	
+	/**
+	 * Just verifies that the info hash are the same. If not, we should drop
+	 * the connection
+	 * 
+	 * @return boolean
+	 */
+	public boolean ifSameHash(byte [] info_hash, byte[] response_info_hash){
+		int index=28;
+		int indexHash=0;
+		while(true){
+			if(indexHash==20){
+				break;
+			}
+			if(info_hash[indexHash]!=response_info_hash[index]){
+				System.out.println("Verfication fail...connection will drop now");
+				return false;
+			}
+			index++;
+			indexHash++;
+		}
+		return true;
+		
 	}
 
 	/**
@@ -187,6 +217,7 @@ public class Peer {
 		message.putInt(BtUtils.INTERESTED_LENGTH_PREFIX);
 		message.put((byte) (BtUtils.INTERESTED_ID));
 		outputStream.write(message.array());
+		System.out.println("testing here");
 	}
 
 	/**
@@ -265,4 +296,5 @@ public class Peer {
 		// add payload
 		outputStream.write(message.array());
 	}
+
 }

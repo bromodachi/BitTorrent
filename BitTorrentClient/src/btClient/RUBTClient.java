@@ -34,7 +34,7 @@ public class RUBTClient {
 		activeTorrent= new TorrentInfoRU(torrentBytes); 		//This is for Rutgers' TorrentInfoRU class
 				
 		//Output for testing
-		System.out.println("Torrent object contents:\n" + activeTorrent);
+		//System.out.println("Torrent object contents:\n" + activeTorrent);
 		
 		//Step 3 - Send an HTTP GET request to the tracker 
 		CommunicationTracker communicateTracker=new CommunicationTracker(activeTorrent);
@@ -44,7 +44,8 @@ public class RUBTClient {
 		//Since we're only connecting one, this is fine, but later on, we need a better way
 		//to access the peers(maybe?)
 		try{communicateTracker.getPeersList().get(0)
-		.establishConnection(activeTorrent.info_hash, communicateTracker.getClientID());;
+		.establishConnection(activeTorrent.info_hash, communicateTracker.getClientID());
+		
 		}catch(Exception e){
 			
 		}

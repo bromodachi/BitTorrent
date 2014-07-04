@@ -19,7 +19,7 @@ import java.util.Random;
 import java.lang.*;
 
 /*TO DO:
- * PORT MUST BE RANDOM
+ * PORT MUST BE RANDOM(as in checking for 6681-6689
  * wireshark for testing*/
 
 public class CommunicationTracker {
@@ -113,6 +113,7 @@ public class CommunicationTracker {
 		/*making the string fullUrl*/
 		String fullUrl="";
 		try {
+			//change length later
 			fullUrl = torrentInfoRU.announce_url.toString() +
 					"?info_hash=" + escape(new String(torrentInfoRU.info_hash.array(), "ISO-8859-1"))+ 
 					"&peer_id="+escape(new String(random_peer))+"&port="+ 6681
