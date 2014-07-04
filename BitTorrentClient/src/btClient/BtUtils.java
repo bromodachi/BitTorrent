@@ -12,7 +12,7 @@ public class BtUtils {
 	 * number of bytes in the complete (header + info_hash + peer_id) Bit
 	 * torrent protocol handshake
 	 */
-	public static final int p2pHandshakeLength = 48;
+	public static final int p2pHandshakeLength = 68;
 	/**
 	 * BitTorrent message id for choke
 	 */
@@ -69,6 +69,8 @@ public class BtUtils {
 	 * BitTorrent length prefix for piece message
 	 */
 	public static final int PIECE_LENGTH_PREFIX = 9;
+	
+	public static final int PREFIX_LENGTH = 4;
 	/**
 	 * BitTorrent keep alive message as a byte array
 	 */

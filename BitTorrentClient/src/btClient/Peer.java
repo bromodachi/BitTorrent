@@ -111,7 +111,7 @@ public class Peer {
 		inputStream = connection.getInputStream();
 		outputStream = connection.getOutputStream();
 
-		ByteBuffer handshake = ByteBuffer.allocate(48);
+		ByteBuffer handshake = ByteBuffer.allocate(BtUtils.p2pHandshakeLength);
 		handshake.put(BtUtils.p2pHandshakeHeader);
 		System.err.println(handshake.position());
 		info_hash.rewind();
@@ -120,7 +120,7 @@ public class Peer {
 			System.err.println(handshake.position());
 			handshake.put(info_hash.get());
 		}
-		while (handshake.position() < handshake.capacity()) {
+		while (clientID.position() < clientID.capacity()) {
 			System.err.println(handshake.position());
 			handshake.put(clientID.get());
 		}
@@ -137,24 +137,132 @@ public class Peer {
 		outputStream.write(bytes);
 
 	}
-	
-	public void sendKeepAlive() throws IOException{
+
+	/**
+	 * Sends an all zero keep alive message to the peer
+	 * 
+	 * @throws IOException
+	 */
+	public void sendKeepAlive() throws IOException {
 		outputStream.write(BtUtils.KEEP_ALIVE);
 	}
-	
-	public void sendChoke(){
-		
-	}
-	
-	public void sendunchoke(){
-		
+
+	/**
+	 * Sends a choke message to the peer
+	 * 
+	 * @throws IOException
+	 */
+	public void sendChoke() throws IOException {
+		byte[] bytes = new byte[BtUtils.CHOKE_LENGTH_PREFIX
+				+ BtUtils.PREFIX_LENGTH];
+		ByteBuffer message = ByteBuffer.wrap(bytes);
+		message.putInt(BtUtils.CHOKE_LENGTH_PREFIX);
+		message.put((byte) (BtUtils.CHOKE_ID));
+		outputStream.write(message.array());
 	}
 
-	public void sendInterested(){
-		
+	/**
+	 * Sends and unchoke message to the peer
+	 * 
+	 * @throws IOException
+	 */
+	public void sendunchoke() throws IOException {
+		byte[] bytes = new byte[BtUtils.UNCHOKE_LENGTH_PREFIX
+				+ BtUtils.PREFIX_LENGTH];
+		ByteBuffer message = ByteBuffer.wrap(bytes);
+		message.putInt(BtUtils.UNCHOKE_LENGTH_PREFIX);
+		message.put((byte) (BtUtils.UNCHOKE_ID));
+		outputStream.write(message.array());
 	}
-	
-	public void sendUninterested(){
-		
+
+	/**
+	 * Sends an interested message to the peer
+	 * 
+	 * @throws IOException
+	 */
+	public void sendInterested() throws IOException {
+		byte[] bytes = new byte[BtUtils.INTERESTED_LENGTH_PREFIX
+				+ BtUtils.PREFIX_LENGTH];
+		ByteBuffer message = ByteBuffer.wrap(bytes);
+		message.putInt(BtUtils.INTERESTED_LENGTH_PREFIX);
+		message.put((byte) (BtUtils.INTERESTED_ID));
+		outputStream.write(message.array());
+	}
+
+	/**
+	 * Sends uninterested message to the peer
+	 * 
+	 * @throws IOException
+	 */
+	public void sendUninterested() throws IOException {
+		byte[] bytes = new byte[BtUtils.UNINTERESTED_LENGTH_PREFIX
+				+ BtUtils.PREFIX_LENGTH];
+		ByteBuffer message = ByteBuffer.wrap(bytes);
+		message.putInt(BtUtils.UNINTERESTED_LENGTH_PREFIX);
+		message.put((byte) (BtUtils.UNINTERESTED_ID));
+		outputStream.write(message.array());
+	}
+
+	/**
+	 * Sends a have message to the peer
+	 * 
+	 * @param index
+	 *            zero based index of the piece referenced in the have message
+	 * @throws IOException
+	 */
+	public void sendHave(int index) throws IOException {
+		byte[] bytes = new byte[BtUtils.HAVE_LENGTH_PREFIX
+				+ BtUtils.PREFIX_LENGTH];
+		ByteBuffer message = ByteBuffer.wrap(bytes);
+		message.putInt(BtUtils.HAVE_LENGTH_PREFIX);
+		message.put((byte) (BtUtils.HAVE_ID));
+		message.putInt(index);
+		outputStream.write(message.array());
+	}
+
+	/**
+	 * Sends a request message to the peer
+	 * 
+	 * @param index
+	 *            zero based index of the piece being requested
+	 * @param offset
+	 *            block offset of piece
+	 * @param length
+	 *            length of piece
+	 * @throws IOException
+	 */
+	public void sendRequest(int index, int offset, int length)
+			throws IOException {
+		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
+				+ BtUtils.PREFIX_LENGTH];
+		ByteBuffer message = ByteBuffer.wrap(bytes);
+		message.putInt(BtUtils.REQUEST_LENGTH_PREFIX);
+		message.put((byte) (BtUtils.HAVE_ID));
+		message.putInt(index);
+		message.putInt(offset);
+		message.putInt(length);
+		outputStream.write(message.array());
+	}
+
+	/**
+	 * Sends a piece message to the peer
+	 * 
+	 * @param index
+	 *            zero based index of the piece
+	 * @param offset
+	 *            block offset of the piece
+	 * @throws IOException
+	 */
+	public void sendPiece(int index, int offset) throws IOException {
+		int payloadLength = 0; // need to figure out code for adding payload
+		byte[] bytes = new byte[BtUtils.PIECE_LENGTH_PREFIX
+				+ BtUtils.PREFIX_LENGTH + payloadLength];
+		ByteBuffer message = ByteBuffer.wrap(bytes);
+		message.putInt(BtUtils.PIECE_LENGTH_PREFIX);
+		message.put((byte) (BtUtils.PIECE_ID));
+		message.putInt(index);
+		message.putInt(offset);
+		// add payload
+		outputStream.write(message.array());
 	}
 }
