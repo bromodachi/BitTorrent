@@ -108,5 +108,4 @@ public class BtUtils {
 	 * The number of bytes in a block 
 	 */
 	public static final int BLOCK_SIZE = 16384;
-
 }

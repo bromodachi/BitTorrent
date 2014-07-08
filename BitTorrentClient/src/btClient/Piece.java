@@ -1,6 +1,12 @@
 package btClient;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * This class is tasked with managing a single piece of the downloaded file.
@@ -29,13 +35,42 @@ public class Piece {
 	 * The number of blocks in this piece
 	 */
 	private final int numBlocks;
+	/**
+	 * The file where the downloaded data is to be saved
+	 */
+	private final RandomAccessFile file;
+	/**
+	 * An array of boolean values indicating whether or not each block index has
+	 * already been downloaded
+	 */
 	private boolean[] blocks;
+	/**
+	 * Starting position of this piece in the output file
+	 */
+	private final int offset;
 	private byte[] hash;
 	private byte[] data;
 
-	public Piece(int index, int size) {
+	/**
+	 * Creates a new piece object with the given parameters
+	 * 
+	 * @param index
+	 *            Zero based index of the piece relative to other pieces of the
+	 *            file
+	 * @param size
+	 *            Size the piece in bytes
+	 * @param offset
+	 *            The offset to the begining of this piece in the file, in bytes
+	 * @param file
+	 *            the file to which this piece is to be saved
+	 * @throws FileNotFoundException
+	 */
+	public Piece(int index, int size, int offset, File file)
+			throws FileNotFoundException {
 		this.index = index;
 		this.size = size;
+		this.offset = offset;
+		this.file = new RandomAccessFile(file, "rw");
 		complete = false;
 		// find total number of blocks in piece
 		if (size % BtUtils.BLOCK_SIZE == 0) {
@@ -86,37 +121,53 @@ public class Piece {
 	}
 
 	/**
-	 * Adds the data in a block to the piece and records that block as being
-	 * downloaded
+	 * Writes the payload of the given message to the download file
 	 * 
-	 * @param block
-	 *            block to be added to piece
-	 * @param offset
-	 *            offset within the piece (should resolve to a block index)
+	 * @param message
+	 *            message with payload to be written to file
+	 * @throws BtException
+	 *             thrown if invalid message is passed
+	 * @throws IOException
 	 */
-	public void addBlock(byte[] block, int offset) {
-		// Make sure the offset resolves to a valid block index (make sure
-		// offset doesn't land data in the middle of a block)
-		if (offset % BtUtils.BLOCK_SIZE != 0) {
-			System.err
-					.println("Invalid block offset: offset does not resolve to a valid block index");
-			return;
+	public void addBlock(byte[] message) throws BtException, IOException {
+		ByteBuffer parser = ByteBuffer.wrap(message);
+		byte message_id = parser.get();
+		if (message_id != BtUtils.PIECE_ID) {
+			throw new BtException(
+					"Message was not a piece message, message id: "
+							+ (int) message_id);
 		}
-		int index = offset / BtUtils.BLOCK_SIZE;
+		int piece_index = parser.getInt();
+		if (piece_index != this.index) {
+			throw new BtException("Piece index does not match");
+		}
+
+		/*
+		 * Make sure the offset resolves to a valid block index (make sure
+		 * offset doesn't land data in the middle of a block)
+		 */
+		int block_offset = parser.getInt();
+		if (block_offset % BtUtils.BLOCK_SIZE != 0) {
+			throw new BtException(
+					"block offset does not reslove to a valid block index");
+		}
+		int block_index = block_offset / BtUtils.BLOCK_SIZE;
+		byte[] payload = new byte[parser.remaining()];
+		parser.get(payload, parser.position(), parser.capacity());
 		// Check if block is last block in piece
 		if (index == numBlocks - 1) {
-			if (block.length > BtUtils.BLOCK_SIZE) {
-				System.err.println("last block is longer than set block size");
-				return;
+			if (payload.length > BtUtils.BLOCK_SIZE) {
+				throw new BtException(
+						"Last block in piece is longer than block size");
 			}
-		} else if (block.length != BtUtils.BLOCK_SIZE) {
-			System.err.println("new block is not the correct size");
-			return;
+		} else if (payload.length != BtUtils.BLOCK_SIZE) {
+			throw new BtException("Incorrect block size");
 		}
-		// add the block to data
-		ByteBuffer buffer = ByteBuffer.wrap(data);
-		buffer.put(block, offset, block.length);
-		blocks[index] = true;
+		// write payload to file
+		FileChannel output = file.getChannel();
+		output.write(ByteBuffer.wrap(payload), (this.offset + block_offset));
+		// update boolean values
+		blocks[block_index] = true;
 		setComplete();
 	}
 }

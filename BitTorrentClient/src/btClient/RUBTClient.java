@@ -245,15 +245,9 @@ public class RUBTClient {
 	}// END decodeTorrent
 
 	public Peer getTestPeer(ArrayList<Peer> peers) {
+		ByteBuffer prefix;
 		for (Peer curr : peers) {
-			byte[] peer_id = curr.getPeer_id().getBytes();
-			for (int i = 0; i < BtUtils.RU_PEER_PREFIX.length; i++) {
-				if (peer_id[i] != BtUtils.RU_PEER_PREFIX[i]) {
-					break;
-				} else if (i == BtUtils.RU_PEER_PREFIX.length) {
-					return curr;
-				}
-			}
+			prefix = ByteBuffer.wrap(curr.getPeer_id().getBytes(), 0, BtUtils.RU_PEER_PREFIX.length);
 		}
 		return null;
 	}
