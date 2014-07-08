@@ -1,5 +1,8 @@
 package btClient;
 
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 /**
@@ -9,15 +12,32 @@ import java.util.ArrayList;
  * @author Cody
  * 
  */
-public class MessageHandler implements Runnable{
+public class MessageHandler implements Runnable {
 
 	private ArrayList<Piece> pieces;
-	private Peer peer;
+	private final Peer peer;
+	private final ByteBuffer info_hash;
+	private final ByteBuffer clientID;
 	
-	@Override
+	public MessageHandler(ArrayList<Piece> pieces, Peer peer, ByteBuffer info_hash, ByteBuffer clientID ) {
+		this.pieces = pieces;
+		this.peer = peer;
+		this.info_hash = info_hash;
+		this.clientID = clientID;
+	}
+	
 	public void run() {
-		// TODO Auto-generated method stub
-		
+			try {
+				peer.establishConnection(info_hash, clientID);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println(e.getMessage());
+				return;
+			}
+
+		while(true){
+			//handle messages and such
+		}
 	}
 
 }

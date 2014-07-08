@@ -332,7 +332,7 @@ public class Peer {
 				BtUtils.PREFIX_LENGTH);
 		if (bytesRead == 0) {
 			return null;
-		} else if (bytesRead != 4) {
+		} else if (bytesRead != BtUtils.PREFIX_LENGTH) {
 			System.err
 					.println("Failed to read message length prefix: incorrect number of bytes");
 			return null;

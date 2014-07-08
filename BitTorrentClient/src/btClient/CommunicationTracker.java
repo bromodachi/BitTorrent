@@ -24,10 +24,10 @@ import java.lang.*;
  * wireshark for testing*/
 
 public class CommunicationTracker {
-	TorrentInfo torrentInfo;
-	String IPAddress;
-	int port;
-	URL urlAddress;
+	private TorrentInfo torrentInfo;
+	private final String IPAddress;
+	private int port;
+	private URL urlAddress;
 	int responseCode;
 	Map<ByteBuffer, Object> responseMap;
 	ByteBuffer peer_bytes;
@@ -43,7 +43,7 @@ public class CommunicationTracker {
 
 	ArrayList<Map<ByteBuffer, Object>> peers;
 	/* Below is client information */
-	ByteBuffer clientID;
+	private final ByteBuffer clientID;
 	int interval;
 	int complete;
 	int incomplete;
