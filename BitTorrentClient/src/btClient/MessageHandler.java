@@ -9,9 +9,15 @@ import java.util.ArrayList;
  * @author Cody
  * 
  */
-public class MessageHandler {
+public class MessageHandler implements Runnable{
 
 	private ArrayList<Piece> pieces;
 	private Peer peer;
+	
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		
+	}
 
 }

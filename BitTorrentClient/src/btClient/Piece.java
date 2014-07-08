@@ -12,8 +12,8 @@ import java.security.NoSuchAlgorithmException;
 
 /**
  * This class is tasked with managing a single piece of the downloaded file.
- * This includes writing blocks to the piece and checking the piece's
- * completeness
+ * This includes writing blocks to the file and checking the piece's
+ * completeness and computing the piece's hash when complete
  * 
  * @author Cody
  * 
