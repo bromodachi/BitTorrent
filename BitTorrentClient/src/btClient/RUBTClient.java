@@ -15,6 +15,7 @@ import java.util.Map;
 //Use ctrl-shift-o or cmd-shift-o in eclipse to automatically import the necessary classes -CW
 
 public class RUBTClient {
+	static ArrayList<Piece>  pieces = null;
 	/**
 	 * @param args
 	 * @throws IOException
@@ -46,19 +47,9 @@ public class RUBTClient {
 		communicationTracker.CommunicateWithTracker();
 
 		// Step 4 - Connect with the Peer.
-		// Since we're only connecting one, this is fine, but later on, we need
-		// a better way
-		// to access the peers(maybe?)
-		try {
-			communicationTracker
-					.getPeersList()
-					.get(0)
-					.establishConnection(activeTorrent.info_hash,
-							communicationTracker.getClientID());
-
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
-		}
+		
+		Thread thread = new Thread(new MessageHandler(pieces, communicationTracker.getPeersList().get(0), activeTorrent.info_hash, communicationTracker.getClientID()));
+		thread.start();
 
 	}// END MAIN
 
