@@ -10,6 +10,14 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
+/**
+ * This class is tasked with managing the connection with a peer and sending
+ * receiving messages between that peer. Handling of messages should take place
+ * elsewhere
+ * 
+ * @author Cody
+ * 
+ */
 public class Peer {
 	private int interval, complete, incomplete, port;
 	private String IP, peer_id;
@@ -146,19 +154,9 @@ public class Peer {
 		byte[] response = new byte[BtUtils.p2pHandshakeLength];
 		inputStream.read(response);
 		/* verify that it's the same info_hash */
-	//	System.out.println(TorrentInfoRU.piece_hashes);
-		try {
-			connection.setSoTimeout(10000);
-		} catch (SocketException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		}
+
 		if (isSameHash(info_hash.array(), response)) {
 			System.out.println("info hash verified");
-			
-			getMessage();
-			//sendRequest(0, 1, 16384);
-			
 		}
 	}
 
@@ -295,9 +293,8 @@ public class Peer {
 			e2.printStackTrace();
 		}
 		getMessage();
-		
+
 	}
-	
 
 	/**
 	 * Sends a piece message to the peer
@@ -330,7 +327,7 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public byte[] getMessage() throws IOException {
-		/*byte[] length_prefix = new byte[BtUtils.PREFIX_LENGTH];
+		byte[] length_prefix = new byte[BtUtils.PREFIX_LENGTH];
 		int bytesRead = inputStream.read(length_prefix, 0,
 				BtUtils.PREFIX_LENGTH);
 		if (bytesRead == 0) {
@@ -341,110 +338,28 @@ public class Peer {
 			return null;
 		}
 		int length = ByteBuffer.wrap(length_prefix).getInt();
-		byte[] message = new byte[length-1];
-		inputStream.read(message);
-		int index=0;
-		while(index!= message.length){
+		byte[] message = new byte[length - 1];
+		inputStream.read(message, 0, length);
+		int index = 0;
+		while (index != message.length) {
 			System.out.println(message[index]);
 			index++;
-		}*/
-		try {
-			connection.setSoTimeout(10000);
-		} catch (SocketException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
 		}
-		
-		int    length  = inputStream.readInt();
-		byte   id      = inputStream.readByte();
-		byte[] payload = new byte[length-1];
-		System.out.println(id);
-		inputStream.readFully(payload);
-		
-		identifyMessage(id, payload);
-		
-		//System.out.println(payload[5]);
-		return payload;
-	}
 
-	/**
-	 * Identifies which message type the given message belongs to
-	 * 
-	 * @param message
-	 *            message to be identified
-	 */
-	public void identifyMessage(int id, byte[] message) {
-		if (message == null) {
-			System.err.println("Failed to identify message: message is null");
-			return;
-		}
-		
-		System.out.println("in identifyMessage "+id);
-		switch (id) {
-		case BtUtils.CHOKE_ID:
-			// choke
-			System.out.println("here");
-			break;
-		case BtUtils.UNCHOKE_ID:
-			System.out.println("in unchoked");
-			try {
-				System.out.println(TorrentInfoRU.KEY_PIECES.array()[0]);
-				sendRequest(0,0,16384);
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-			
-			break;
-		case BtUtils.INTERESTED_ID:
-			// interested
-			break;
-		case BtUtils.UNINTERESTED_ID:
-			// uninterested
-			break;
-		case BtUtils.HAVE_ID:
-			// have
-			System.out.println("wtf");
-			break;
-		case BtUtils.BITFIELD_ID:
-			System.out.println("bitfield");
-			
-				System.out.println("about to enter bitfield method");
-				int index=1;
-				System.out.println("about to enter bitfield method");
-				bitField(message);
-			try {
-				sendInterested();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			 
-			break;
-		case BtUtils.REQUEST_ID:
-			// request
-			break;
-		case BtUtils.PIECE_ID:
-			// piece
-			break;
-		
-		default:
-			System.out.println("You fucked up big time ");
-	}
+		return message;
 	}
 
 	private void bitField(byte[] message) {
 		// TODO Auto-generated method stub
-		
-		int index=0;
-		System.out.println("heere");
-		while(index!=message.length-1){
-			if(Math.abs(message[index])==1){
-				System.out.println("yes");
-			}
-			else{
-				System.out.println("no"+ message[index]);
-				
+
+		int index = 0;
+		System.out.println("inside bitfield method");
+		while (index != message.length - 1) {
+			if (Math.abs(message[index]) == 1) {
+				System.out.println("abs(message[index]) == 1");
+			} else {
+				System.out.println("message[index]" + message[index]);
+
 			}
 			index++;
 		}

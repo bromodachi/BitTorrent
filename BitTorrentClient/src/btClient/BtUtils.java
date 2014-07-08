@@ -1,5 +1,10 @@
 package btClient;
 
+/**
+ * This class was written to provide utilities such as constants and commonly
+ * called methods as a convience for developing the a BitTorrent client for the
+ * Rutgers Internet Technologies (352) couse : Summer 2014
+ */
 public class BtUtils {
 	/**
 	 * Byte array representation of the Bit Torrent protocol handshake header
@@ -33,6 +38,10 @@ public class BtUtils {
 	 * BitTorrent message id for have
 	 */
 	public static final byte HAVE_ID = 4;
+	/**
+	 * BitTorrent message id for bitfield
+	 */
+	public static final byte BITFIELD_ID = 5;
 	/**
 	 * BitTorrent message id for request
 	 */
@@ -89,6 +98,15 @@ public class BtUtils {
 	/**
 	 * 
 	 */
-	public static final byte [] MESSAGE_READ_ERROR = "failed to read message".getBytes();
+	public static final byte[] MESSAGE_READ_ERROR = "failed to read message"
+			.getBytes();
+	/**
+	 * The prefix for the peer specified on the rutgers sakai page
+	 */
+	public static final byte[] RU_PEER_PREFIX = "RU1103".getBytes();
+	/**
+	 * The number of bytes in a block 
+	 */
+	public static final int BLOCK_SIZE = 16384;
 
 }
