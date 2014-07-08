@@ -142,19 +142,15 @@ public class CommunicationTracker {
 			connection = (HttpURLConnection) urlAddress.openConnection();
 			connection.setDoOutput(true);
 			connection.setRequestMethod("GET");
-			// String message=connection.getResponseMessage();
-			// System.out.println("Response message is: "+message);
 			responseCode = connection.getResponseCode();
 			DataInputStream reader = new DataInputStream(
 					connection.getInputStream());
 
 			byte[] response = new byte[connection.getContentLength()];
-			// System.out.println(response);
 			reader.readFully(response);
 			reader.close();
 			/* end of http connection */
 
-			// System.out.println(response+" "+connection.getContentLength());
 			try {
 				responseMap = (Map<ByteBuffer, Object>) Bencoder2
 						.decode(response);
@@ -180,14 +176,11 @@ public class CommunicationTracker {
 			incomplete = (int) responseMap.get(ByteBuffer.wrap(new byte[] {
 					'i', 'n', 'c', 'o', 'm', 'p', 'l', 'e', 't', 'e' }));
 
-			// System.out.println("Interval is: "+interval
-			// +"\n"+"Complete: "+complete+"\nIncomplete: "+incomplete);
 
 			peers = (ArrayList<Map<ByteBuffer, Object>>) responseMap
 					.get(ByteBuffer
 							.wrap(new byte[] { 'p', 'e', 'e', 'r', 's' }));
 
-			// String pieces=new String(peer_id.array(), "ASCII");
 			if (peers == null) {
 				// real error message later
 				System.out.println("Peers were not extracted");
