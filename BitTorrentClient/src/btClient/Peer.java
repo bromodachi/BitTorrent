@@ -270,11 +270,11 @@ public class Peer {
 	 *            zero based index of the piece being requested
 	 * @param offset
 	 *            block offset of piece
-	 * @param length
-	 *            length of piece
+	 * @param block_length
+	 *           number of bytes in a typical block in the piece 
 	 * @throws IOException
 	 */
-	public void sendRequest(int index, int offset, int length)
+	public void sendRequest(int index, int offset, int block_length)
 			throws IOException {
 		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
 				+ BtUtils.PREFIX_LENGTH];
@@ -283,7 +283,7 @@ public class Peer {
 		message.put((byte) (BtUtils.HAVE_ID));
 		message.putInt(index);
 		message.putInt(offset);
-		message.putInt(length);
+		message.putInt(block_length);
 		outputStream.write(message.array());
 		System.out.println("testing here");
 		try {
