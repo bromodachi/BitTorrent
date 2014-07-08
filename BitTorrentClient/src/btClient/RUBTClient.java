@@ -23,7 +23,7 @@ public class RUBTClient {
 	public static void main(String[] args) throws IOException,
 			BencodingException {
 
-		TorrentInfoRU activeTorrent;
+		TorrentInfo activeTorrent;
 
 		// Validate args
 		validateArgs(args);
@@ -34,7 +34,7 @@ public class RUBTClient {
 		// Decode the torrent to produce it's TorrentInfo object.
 		// activeTorrent=decodeTorrent(torrentBytes); //This is for our
 		// TorrentInfo class
-		activeTorrent = new TorrentInfoRU(torrentBytes); // This is for Rutgers'
+		activeTorrent = new TorrentInfo(torrentBytes); // This is for Rutgers'
 															// TorrentInfoRU
 															// class
 
@@ -102,10 +102,12 @@ public class RUBTClient {
 	}// END validateArgs
 
 	/**
-	 * Return the bytes of a file to be used with Bencoder2.java Requires Java7
+	 * Return the bytes of a torrent file to be used with Bencoder2.java
+	 * Requires Java7
 	 * 
 	 * @param file
-	 * @return byte
+	 *            file to be converted to a byte array
+	 * @return byte torrent file represented as a byte array
 	 * @throws IOException
 	 */
 	public static byte[] getFileBytes(String fileName) throws IOException,
@@ -130,124 +132,11 @@ public class RUBTClient {
 		return torrentBytes;
 	}// END getFileBytes
 
-	/**
-	 * Decodes the torrent and creates a TorrentInfo object
-	 * 
-	 * Note, there are two nested k-v maps: torrentMap (outer) and
-	 * torrentInfoMap (inner) torrentMap has the tracker URL (announce),
-	 * creator, creation date, and torrent info dictionary (torrentInfoMap).
-	 * torrentInfoMap is the 'info' dictionary with the rest of the torrent
-	 * info: name (file or directory), length (int) xor files (list of
-	 * file-maps), and pieces (SHA1 hashes). The keys of type ByteBuffer Because
-	 * that is what Bencoder2 returns. ByteBuffer is used for fast low-level
-	 * I/O, good for TCP/IP
-	 * 
-	 * @param torrentMap
-	 * @return
-	 */
-	public static TorrentInfo decodeTorrent(byte[] torrentBytes)
-			throws IOException, BencodingException {
-
-		// Returned object
-		TorrentInfo thisTorrent = null; // TorentInfo object to be returned
-
-		// Temp variables
-		ByteBuffer pathBytes = null;
-		Map<ByteBuffer, Object> torrentMap = null;
-		Map<ByteBuffer, Object> torrentInfoMap = null;
-		ByteBuffer urlBytes;
-		ByteBuffer createdByBytes;
-		ByteBuffer infoBytes;
-		ByteBuffer nameBytes;
-		ByteBuffer nameBytesUTF;
-		ByteBuffer piecesBytes;
-		String urlString;
-
-		// Raw data in object - do we need to send this to the new object? -CW
-		ByteBuffer infoHash = null; // for the tracker?
-		ByteBuffer[] piecesHashValues;
-		byte[] SHA1Hash; // Not implemented yet.
-
-		// declare vars for parsed data in object
-		boolean singleFile = true; // Single file to be downloaded
-		URL url;
-		String creator;
-		int creationDate;
-		int totalLength = 0; // Length of a single file download
-		String fileName;
-		String fileNameUTF;
-		int pieceLength = 0;
-		ArrayList<Map> fileList = null;
-
-		try {
-			// decode the outer torrent map
-			torrentMap = (Map<ByteBuffer, Object>) Bencoder2
-					.decode(torrentBytes);
-		} catch (BencodingException e) {
-			System.err.println("Error, couldn't decode the torrentmap");
-			System.exit(1);
-		}
-
-		try {
-			// Decode the inner 'info' map
-			infoBytes = Bencoder2.getInfoBytes(torrentBytes);
-		} catch (BencodingException e) {
-			System.err.println("Error, couldn't decode the torrentmap");
-			System.exit(1);
-		}
-
-		// Get the values related to each map key
-		torrentInfoMap = (Map<ByteBuffer, Object>) torrentMap.get(ByteBuffer
-				.wrap(new byte[] { 'i', 'n', 'f', 'o' }));
-		urlBytes = (ByteBuffer) torrentMap.get(ByteBuffer.wrap(new byte[] {
-				'a', 'n', 'n', 'o', 'u', 'n', 'c', 'e' }));
-		createdByBytes = (ByteBuffer) torrentMap.get(ByteBuffer
-				.wrap(new byte[] { 'c', 'r', 'e', 'a', 't', 'e', 'd', ' ', 'b',
-						'y' }));
-		creationDate = (int) torrentMap.get(ByteBuffer.wrap(new byte[] { 'c',
-				'r', 'e', 'a', 't', 'i', 'o', 'n', ' ', 'd', 'a', 't', 'e' }));
-		nameBytes = (ByteBuffer) torrentInfoMap.get(ByteBuffer.wrap(new byte[] {
-				'n', 'a', 'm', 'e' }));
-		nameBytesUTF = (ByteBuffer) torrentInfoMap.get(ByteBuffer
-				.wrap(new byte[] { 'n', 'a', 'm', 'e', '.', 'u', 't', 'f', '-',
-						'8' }));
-		pieceLength = (int) torrentInfoMap.get(ByteBuffer.wrap(new byte[] {
-				'p', 'i', 'e', 'c', 'e', ' ', 'l', 'e', 'n', 'g', 't', 'h' }));
-		piecesBytes = (ByteBuffer) torrentInfoMap.get(ByteBuffer
-				.wrap(new byte[] { 'p', 'i', 'e', 'c', 'e', 's' }));
-		if (torrentInfoMap.containsKey(ByteBuffer.wrap(new byte[] { 'l', 'e',
-				'n', 'g', 't', 'h' }))) {
-			singleFile = true;
-			totalLength = (int) torrentInfoMap.get(ByteBuffer.wrap(new byte[] {
-					'l', 'e', 'n', 'g', 't', 'h' }));
-		} else if (torrentInfoMap.containsKey(ByteBuffer.wrap(new byte[] { 'f',
-				'i', 'l', 'e', 's' }))) {
-			singleFile = false;
-			pathBytes = (ByteBuffer) torrentInfoMap.get(ByteBuffer
-					.wrap(new byte[] { 'p', 'a', 't', 'h' }));
-		}
-
-		// Convert ByteBuffer objects to strings
-		urlString = new String(urlBytes.array(), "ASCII");
-		creator = new String(createdByBytes.array(), "ASCII");
-		fileName = new String(nameBytes.array(), "ASCII");
-		fileNameUTF = new String(nameBytesUTF.array(), "ASCII");
-		String pieces = new String(piecesBytes.array(), "ASCII");
-
-		url = new URL(urlString);
-
-		// Make TorrentInfo object from the data
-		thisTorrent = new TorrentInfo(singleFile, url, creator, creationDate,
-				fileName, fileNameUTF, pieceLength, totalLength, fileList);
-
-		return thisTorrent;
-
-	}// END decodeTorrent
-
 	public Peer getTestPeer(ArrayList<Peer> peers) {
 		ByteBuffer prefix;
 		for (Peer curr : peers) {
-			prefix = ByteBuffer.wrap(curr.getPeer_id().getBytes(), 0, BtUtils.RU_PEER_PREFIX.length);
+			prefix = ByteBuffer.wrap(curr.getPeer_id().getBytes(), 0,
+					BtUtils.RU_PEER_PREFIX.length);
 		}
 		return null;
 	}

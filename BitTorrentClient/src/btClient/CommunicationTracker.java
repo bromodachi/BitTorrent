@@ -24,7 +24,7 @@ import java.lang.*;
  * wireshark for testing*/
 
 public class CommunicationTracker {
-	TorrentInfoRU torrentInfoRU;
+	TorrentInfo torrentInfo;
 	String IPAddress;
 	int port;
 	URL urlAddress;
@@ -48,9 +48,9 @@ public class CommunicationTracker {
 	int complete;
 	int incomplete;
 
-	public CommunicationTracker(TorrentInfoRU passTheTorrentFile) {
-		this.torrentInfoRU = passTheTorrentFile;
-		this.urlAddress = torrentInfoRU.announce_url;
+	public CommunicationTracker(TorrentInfo passTheTorrentFile) {
+		this.torrentInfo = passTheTorrentFile;
+		this.urlAddress = torrentInfo.announce_url;
 		this.IPAddress = urlAddress.getHost();
 		this.port = urlAddress.getPort();
 		this.clientID = ByteBuffer.wrap(getRandomID());
@@ -61,8 +61,8 @@ public class CommunicationTracker {
 		return clientID;
 	}
 
-	public TorrentInfoRU getTorrent() {
-		return torrentInfoRU;
+	public TorrentInfo getTorrent() {
+		return torrentInfo;
 	}
 
 	public ArrayList<Peer> getPeersList() {
@@ -115,13 +115,13 @@ public class CommunicationTracker {
 		String fullUrl = "";
 		try {
 			// change length later
-			fullUrl = torrentInfoRU.announce_url.toString()
+			fullUrl = torrentInfo.announce_url.toString()
 					+ "?info_hash="
-					+ escape(new String(torrentInfoRU.info_hash.array(),
+					+ escape(new String(torrentInfo.info_hash.array(),
 							"ISO-8859-1")) + "&peer_id="
 					+ escape(new String(clientID.array())) + "&port=" + 6681
 					+ "&uploaded=" + uploaded + "&downloaded=" + downloaded
-					+ "&left=" + torrentInfoRU.file_length + "&event="
+					+ "&left=" + torrentInfo.file_length + "&event="
 					+ "started";
 		} catch (UnsupportedEncodingException e2) {
 			// TODO Auto-generated catch block
