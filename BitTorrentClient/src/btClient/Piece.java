@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * This class is tasked with managing a single piece of the downloaded file.
@@ -48,8 +50,10 @@ public class Piece {
 	 * Starting position of this piece in the output file
 	 */
 	private final int offset;
+	/**
+	 * The SHA-1 hash of this piece (only available once piece is completed)
+	 */
 	private byte[] hash;
-	private byte[] data;
 
 	/**
 	 * Creates a new piece object with the given parameters
@@ -101,23 +105,42 @@ public class Piece {
 		return hash;
 	}
 
-	public byte[] getData() {
-		return data;
-	}
-
 	/**
 	 * Sets the complete value by checking if all blocks are downloaded
 	 */
 	public void setComplete() {
-		if (complete == true) {
-			return;
-		}
 		for (boolean curr : blocks) {
 			if (curr == false) {
-				break;
+				complete = false;
+				return;
 			}
 		}
 		complete = true;
+	}
+
+	/**
+	 * Creates a SHA-1 hash for the piece (only if piece is completed)
+	 * 
+	 * @throws IOException
+	 */
+	private void setHash() throws IOException {
+		if (!complete) {
+			System.err
+					.println("Attempted to create hash for piece that is not complete");
+			return;
+		}
+		FileChannel input = file.getChannel();
+		ByteBuffer bytes = ByteBuffer.wrap(new byte[size]);
+		input.read(bytes, this.offset);
+
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-1");
+			digest.update(bytes.array());
+			byte[] hash = digest.digest();
+			this.hash = hash;
+		} catch (NoSuchAlgorithmException nsae) {
+			System.err.println("Algorithm not found");
+		}
 	}
 
 	/**
@@ -166,8 +189,13 @@ public class Piece {
 		// write payload to file
 		FileChannel output = file.getChannel();
 		output.write(ByteBuffer.wrap(payload), (this.offset + block_offset));
+		output.close();
 		// update boolean values
 		blocks[block_index] = true;
 		setComplete();
+		// create hash if complete
+		if (complete) {
+			setHash();
+		}
 	}
 }
