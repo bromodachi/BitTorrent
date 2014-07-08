@@ -53,6 +53,7 @@ public class CommunicationTracker {
 		this.urlAddress = torrentInfoRU.announce_url;
 		this.IPAddress = urlAddress.getHost();
 		this.port = urlAddress.getPort();
+		this.clientID = ByteBuffer.wrap(getRandomID());
 
 	}
 
@@ -87,10 +88,10 @@ public class CommunicationTracker {
 	 */
 
 	public byte[] getRandomID() {
-		byte[] random_peer = new byte[20];
+		byte[] random_id = new byte[20];
 		Random random = new Random();
-		random.nextBytes(random_peer);
-		return random_peer;
+		random.nextBytes(random_id);
+		return random_id;
 	}
 
 	public String escape(String blah) {
@@ -110,8 +111,6 @@ public class CommunicationTracker {
 
 		HttpURLConnection connection = null;
 
-		byte[] random_peer = getRandomID();
-
 		/* making the string fullUrl */
 		String fullUrl = "";
 		try {
@@ -120,7 +119,7 @@ public class CommunicationTracker {
 					+ "?info_hash="
 					+ escape(new String(torrentInfoRU.info_hash.array(),
 							"ISO-8859-1")) + "&peer_id="
-					+ escape(new String(random_peer)) + "&port=" + 6681
+					+ escape(new String(clientID.array())) + "&port=" + 6681
 					+ "&uploaded=" + uploaded + "&downloaded=" + downloaded
 					+ "&left=" + torrentInfoRU.file_length + "&event="
 					+ "started";
@@ -212,7 +211,6 @@ public class CommunicationTracker {
 				Peer temp_peer = new Peer(ipS, peerID, peer_port);
 				peersList.add(temp_peer);
 			}
-			clientID = ByteBuffer.wrap(random_peer);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.out.println("Can't open the connection :c");
