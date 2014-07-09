@@ -2,22 +2,25 @@ package btClient;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL; //not sure if we need this one yet but let's see --Conrado, see my note below, -CW
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Map;
 
-//Use ctrl-shift-o or cmd-shift-o in eclipse to automatically import the necessary classes -CW
 
 public class RUBTClient {
+	
 	static ArrayList<Piece>  pieces = null;
+	
 	/**
-	 * @param args
+	 * This is the main class for CS352, BitTorrent project 1
+	 * The program is designed to load a .torrent file, interface with a 
+	 * tracker and a single peer and will download a single file (a JPEG) from 
+	 * that peer. The file is then saved to a hard disk. All communication is 
+	 * done over TCP.
+	 * 
+	 * @param args The name of the .torrent file to be loaded and the name of 
+	 * the file to save the data to, using the proper path and file extensions.
 	 * @throws IOException
 	 * @throws BencodingException
 	 */
@@ -26,48 +29,39 @@ public class RUBTClient {
 
 		TorrentInfo activeTorrent;
 
-		// Validate args
+		// Step 1 - Take the command line arguments
 		validateArgs(args);
 
-		// Get all the bytes from the torrent file
+		// Step 2 - Open the .torrent file and parse the data inside
 		byte[] torrentBytes = getFileBytes(args[0]);
-
-		// Decode the torrent to produce it's TorrentInfo object.
-		// activeTorrent=decodeTorrent(torrentBytes); //This is for our
-		// TorrentInfo class
-		activeTorrent = new TorrentInfo(torrentBytes); // This is for Rutgers'
-															// TorrentInfoRU
-															// class
-
-		// Output for testing
+		activeTorrent = new TorrentInfo(torrentBytes);
 
 		// Step 3 - Send an HTTP GET request to the tracker
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
 		communicationTracker.CommunicateWithTracker();
 
-		// Step 4 - Connect with the Peer.
-		
-		Thread thread = new Thread(new MessageHandler(pieces, communicationTracker.getPeersList().get(0), activeTorrent.info_hash, communicationTracker.getClientID()));
+		// Step 4 - Connect with the Peer.	
+		Thread thread = new Thread(new MessageHandler(pieces, 
+				communicationTracker.getPeersList().get(0), 
+				activeTorrent.info_hash, communicationTracker.getClientID()));
 		thread.start();
 
 	}// END MAIN
 
 	/**
 	 * Validates the command line arguments to see if the parameters are good.
-	 * The program exits if the arguments are bad. We need to change the image
-	 * file validation later in the project.
+	 * The program exits if the arguments are bad.
 	 * 
-	 * @param args
-	 *            the command line arguments from the main method.
+	 * @param args The command line arguments from the main method.
 	 */
 	public static void validateArgs(String[] args) {
 		// The main method requires two command line arguments:
 		// The name of the torrent file to load, and the name to the resulting
 		// file to save-as.
 		if (args.length != 2) {
-			System.err
-					.println("Incorrect arguments. Need 'somefile.torrent' 'picture.jpg'");
+			System.err.println("Incorrect arguments. "
+					+ "Need 'somefile.torrent' 'picture.jpg'");
 			System.exit(1);
 		}
 
@@ -93,12 +87,13 @@ public class RUBTClient {
 	}// END validateArgs
 
 	/**
-	 * Return the bytes of a torrent file to be used with Bencoder2.java
-	 * Requires Java7
+	 * Returns the byte array of a file to be used with Bencoder2.java. 
+	 * The byte array format is required as input to the Bencoder2 class.
+	 * Requires jre7 or greater.
 	 * 
-	 * @param file
-	 *            file to be converted to a byte array
-	 * @return byte torrent file represented as a byte array
+	 * 
+	 * @param file The file to be converted to a byte array
+	 * @return byte The torrent file represented as a byte array
 	 * @throws IOException
 	 */
 	public static byte[] getFileBytes(String fileName) throws IOException,
@@ -109,8 +104,8 @@ public class RUBTClient {
 
 		// Make sure the file exists and it's not a directory
 		if (!torrentFile.exists() || torrentFile.isDirectory()) {
-			System.err
-					.println("Couldn't load the torrent file.  Exiting program.");
+			System.err.println("Couldn't load the torrent file.  "
+					+ "Exiting program.");
 			System.exit(1);
 		}
 
