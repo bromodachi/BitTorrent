@@ -13,7 +13,7 @@ public class RUBTClient {
 	static ArrayList<Piece>  pieces = null;
 	
 	/**
-	 * This is the main class for CS352, BitTorrent project 1
+	 * This is the main client class for CS352, BitTorrent project 1
 	 * The program is designed to load a .torrent file, interface with a 
 	 * tracker and a single peer and will download a single file (a JPEG) from 
 	 * that peer. The file is then saved to a hard disk. All communication is 
@@ -71,19 +71,6 @@ public class RUBTClient {
 		if (!(torrentChecker.equals("torrent"))) {
 			System.err.println("Not a valid .torrent file, exiting program.");
 		}
-
-		// TODO - Modify this later for general file types
-		// Validating if arg[1] has correct file extension .JPG, .PNG, .GIF,
-		// .jpg, .gif, .png;
-		String extChecker = args[1].substring(args[1].lastIndexOf(".") + 1,
-				args[1].length());
-		if (!(extChecker.toLowerCase().equals("gif")
-				|| extChecker.toLowerCase().equals("png") || extChecker
-				.toLowerCase().equals("jpg"))) {
-			System.err.println("Not a valid image file type, exiting program.");
-			System.exit(1);
-		}
-		// System.out.println("Valid args.\n");
 	}// END validateArgs
 
 	/**

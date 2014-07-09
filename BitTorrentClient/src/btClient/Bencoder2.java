@@ -67,10 +67,13 @@ public final class Bencoder2
     /**
      * Extracts the bencoded 'info' dictionary from a metainfo torrent file.
      * @param torrent_file_bytes the bencoded metainfo dictionary.
-     * @return a {@code ByteBuffer} containing the bencoded 'info' dictionary from the metainfo file.
-     * @throws BencodingException if the 'info' key is not contained in the decoded dictionary.
+     * @return a {@code ByteBuffer} containing the bencoded 'info' dictionary 
+     * from the metainfo file.
+     * @throws BencodingException if the 'info' key is not contained in the 
+     * decoded dictionary.
      */
-    public static final ByteBuffer getInfoBytes(byte[] torrent_file_bytes) throws BencodingException
+    public static final ByteBuffer getInfoBytes(byte[] torrent_file_bytes) 
+    		throws BencodingException
     {
         Object[] vals = decodeDictionary(torrent_file_bytes,0);
         if(vals.length != 3 || vals[2] == null)
@@ -87,22 +90,29 @@ public final class Bencoder2
     /**
      * Decodes a bencoded object represented by the byte array.
      * @param bencoded_bytes the bencoded data to decode.
-     * @return either a {@code Map}, {@code List}, {@code ByteBuffer}, or {@code Integer}.
+     * @return either a {@code Map}, {@code List}, {@code ByteBuffer}, or 
+     * {@code Integer}.
      * @throws BencodingException if the bencoded data was improperly formatted.
      */
-    public static final Object decode(byte[] bencoded_bytes) throws BencodingException
+    public static final Object decode(byte[] bencoded_bytes) 
+    		throws BencodingException
     {
         return decode(bencoded_bytes, 0)[1];
     }
     
     /**
-     * Decodes a bencoded object represented by the byte array, starting at the specified offset.
+     * Decodes a bencoded object represented by the byte array, starting at the 
+     * specified offset.
      * @param bencoded_bytes the bencoded data to decode.
-     * @param offset the offset into {@code bencoded_bytes} at which to start decoding.
-     * @return a {@code Map}, {@code List}, {@code ByteBuffer}, or {@code Integer}.
-     * @throws BencodingException if the bencoded object in {@code bencoded_bytes} at offset {@code offset} is incorrectly encoded. 
+     * @param offset the offset into {@code bencoded_bytes} at which to start 
+     * decoding.
+     * @return a {@code Map}, {@code List}, {@code ByteBuffer}, or 
+     * {@code Integer}.
+     * @throws BencodingException if the bencoded object in 
+     * {@code bencoded_bytes} at offset {@code offset} is incorrectly encoded. 
      */
-    private static final Object[] decode(byte[] bencoded_bytes, int offset) throws BencodingException
+    private static final Object[] decode(byte[] bencoded_bytes, int offset) 
+    		throws BencodingException
     {
         switch(nextObject(bencoded_bytes, offset))
         {
@@ -124,40 +134,52 @@ public final class Bencoder2
      * @param bencoded_bytes the byte array of the bencoded integer.
      * @param offset the position of the 'i' indicating the start of the
      *        bencoded integer to be bdecoded.
-     * @return an <code>Object[]</code> containing an <code>Integer</code> offset and the decoded
+     * @return an <code>Object[]</code> containing an <code>Integer</code> 
+     * offset and the decoded
      *          <code>Integer</code>, in positions 0 and 1, respectively
-     * @throws BencodingException if the bencoded integer in {@code bencoded_bytes} at offset {@code offset} is incorrectly encoded.
+     * @throws BencodingException if the bencoded integer in 
+     * {@code bencoded_bytes} at offset {@code offset} is incorrectly encoded.
      */
-    private static final Object[] decodeInteger(byte[] bencoded_bytes, int offset) throws BencodingException
+    private static final Object[] decodeInteger(byte[] bencoded_bytes, 
+    		int offset) throws BencodingException
     {
         StringBuffer int_chars = new StringBuffer();
         offset++;
-        for(; bencoded_bytes[offset] != (byte)'e' && bencoded_bytes.length > (offset); offset++)
+        for(; bencoded_bytes[offset] != (byte)'e' && bencoded_bytes.length > 
+        (offset); offset++)
         {
-            if((bencoded_bytes[offset] < 48 || bencoded_bytes[offset] > 57) && bencoded_bytes[offset] != 45)
-                throw new BencodingException("Expected an ASCII integer character, found " + (int)bencoded_bytes[offset]);
+            if((bencoded_bytes[offset] < 48 || bencoded_bytes[offset] > 57) && 
+            		bencoded_bytes[offset] != 45)
+                throw new BencodingException("Expected an ASCII integer "
+                		+ "character, found " + (int)bencoded_bytes[offset]);
             int_chars.append((char)bencoded_bytes[offset]);
         }
         try 
         {
             offset++;   // Skip the 'e'
-            return new Object[] {new Integer(offset),new Integer(Integer.parseInt(int_chars.toString()))};
+            return new Object[] {new Integer(offset),new Integer(
+            		Integer.parseInt(int_chars.toString()))};
         }
         catch(NumberFormatException nfe)
         {
-            throw new BencodingException("Could not parse integer at position" + offset + ".\nInvalid character at position " + offset + ".");
+            throw new BencodingException("Could not parse integer at position" 
+        + offset + ".\nInvalid character at position " + offset + ".");
         }
     }
     
     /**
      * Decodes a byte string from the byte array
      * @param bencoded_bytes the bencoded form of the byte string.
-     * @param offset the offset into {@code bencoded_bytes} where the byte string begins.
-     * @return an <code>Object[]</code> containing an <code>Integer</code> offset and the decoded
-     *          byte string (as a {@code ByteBuffer}), in positions 0 and 1, respectively
+     * @param offset the offset into {@code bencoded_bytes} where the byte 
+     * string begins.
+     * @return an <code>Object[]</code> containing an <code>Integer</code> 
+     * offset and the decoded
+     *          byte string (as a {@code ByteBuffer}), in positions 0 and 1, 
+     *          respectively
      * @throws BencodingException if the bencoded object is incorrectly encoded.
      */
-    private static final Object[] decodeString(byte[] bencoded_bytes, int offset) throws BencodingException
+    private static final Object[] decodeString(byte[] bencoded_bytes, 
+    		int offset) throws BencodingException
     {
         StringBuffer digits = new StringBuffer();
         while(bencoded_bytes[offset] > '/' && bencoded_bytes[offset] < ':')
@@ -166,25 +188,32 @@ public final class Bencoder2
         }
         if(bencoded_bytes[offset] != ':')
         {
-            throw new BencodingException("Error: Invalid character at position " + offset + ".\nExpecting ':' but found '" + (char)bencoded_bytes[offset] + "'.");
+            throw new BencodingException("Error: Invalid character at position " 
+        + offset + ".\nExpecting ':' but found '" + (char)bencoded_bytes[offset]
+        		+ "'.");
         }
         offset++;
         int length = Integer.parseInt(digits.toString());
         byte[] byte_string = new byte[length];
-        System.arraycopy(bencoded_bytes, offset, byte_string, 0, byte_string.length);
-        return new Object[] {new Integer(offset+length), ByteBuffer.wrap(byte_string)};
+        System.arraycopy(bencoded_bytes, offset, byte_string, 0, 
+        		byte_string.length);
+        return new Object[] {new Integer(offset+length), 
+        		ByteBuffer.wrap(byte_string)};
     }
     
     /**
      * Decodes a list from the bencoded byte array.
      * @param bencoded_bytes the bencoded form of the list.
-     * @param offset the offset into {@code bencoded_bytes} where the list begins.
-     * @return an <code>Object[]</code> containing an <code>Integer</code> offset and the decoded
+     * @param offset the offset into {@code bencoded_bytes} where the list 
+     * begins.
+     * @return an <code>Object[]</code> containing an <code>Integer</code> 
+     * offset and the decoded
      *          list (as a {@code List}), in positions 0 and 1, respectively
      * @throws BencodingException if the bencoded object is incorrectly encoded.
      */
     @SuppressWarnings("unchecked")
-	private static final Object[] decodeList(byte[] bencoded_bytes, int offset) throws BencodingException
+	private static final Object[] decodeList(byte[] bencoded_bytes, int offset)
+			throws BencodingException
     {
         ArrayList list = new ArrayList();
         offset++;
@@ -202,13 +231,16 @@ public final class Bencoder2
     /**
      * Decodes a dictionary from the bencoded byte array.
      * @param bencoded_bytes the bencoded form of the dictionary.
-     * @param offset the offset into {@code bencoded_bytes} where the dictionary begins.
-     * @return an <code>Object[]</code> containing an <code>Integer</code> offset and the decoded
+     * @param offset the offset into {@code bencoded_bytes} where the 
+     * dictionary begins.
+     * @return an <code>Object[]</code> containing an <code>Integer</code> 
+     * offset and the decoded
      *          dictionary (as a {@code Map}, in positions 0 and 1, respectively
      * @throws BencodingException if the bencoded object is incorrectly encoded.
      */
     @SuppressWarnings("unchecked")
-	private static final Object[] decodeDictionary(byte[] bencoded_bytes, int offset) throws BencodingException
+	private static final Object[] decodeDictionary(byte[] bencoded_bytes, 
+			int offset) throws BencodingException
     {
         HashMap map = new HashMap();
         ++offset;
@@ -236,8 +268,10 @@ public final class Bencoder2
             offset = ((Integer)vals[0]).intValue();
             if(match)
             {
-                info_hash_bytes = ByteBuffer.wrap(new byte[offset - info_offset]);
-                info_hash_bytes.put(bencoded_bytes,info_offset, info_hash_bytes.array().length);
+                info_hash_bytes = ByteBuffer.wrap(new byte[offset - 
+                                                           info_offset]);
+                info_hash_bytes.put(bencoded_bytes,info_offset, 
+                		info_hash_bytes.array().length);
             }
             else if(vals[1] instanceof HashMap)
             {
@@ -253,7 +287,8 @@ public final class Bencoder2
     /**
      * Determines the bencoded data type at {@code bencoded_bytes[offset]}.
      * @param bencoded_bytes the bencoded data.
-     * @param offset the offset into {@code bencoded_bytes} that contains a bencoded object.
+     * @param offset the offset into {@code bencoded_bytes} that contains a 
+     * bencoded object.
      * @return the type of the bencoded object.
      * @see #DICTIONARY
      * @see #LIST
@@ -297,7 +332,8 @@ public final class Bencoder2
      * Bencodes the specified object as a {@code byte[]}.
      * @param o the object to bencode.
      * @return the bencoded form of the object.
-     * @throws BencodingException if {@code o} is not of type {@code HashMap}, {@code ArrayList},
+     * @throws BencodingException if {@code o} is not of type {@code HashMap}, 
+     * {@code ArrayList},
      *  		{@code Integer}, or {@code ByteBuffer}.
      */
     @SuppressWarnings("unchecked")
@@ -312,7 +348,8 @@ public final class Bencoder2
         else if(o instanceof ByteBuffer)
             return encodeString((ByteBuffer)o);
         else
-            throw new BencodingException("Error: Object not of valid type for Bencoding.");
+            throw new BencodingException("Error: Object not of valid type for "
+            		+ "Bencoding.");
     }
     
     
@@ -331,7 +368,8 @@ public final class Bencoder2
         }
         byte[] bencoded_string = new byte[length+num_digits+1];
         bencoded_string[num_digits] = (byte)':';
-        System.arraycopy(string.array(), 0, bencoded_string, num_digits+1, length);
+        System.arraycopy(string.array(), 0, bencoded_string, num_digits+1, 
+        		length);
         for(int i = num_digits-1; i >= 0; i--)
         {
             bencoded_string[i] = (byte)((length % 10)+48);
@@ -366,11 +404,14 @@ public final class Bencoder2
     /**
      * Bencodes the specified {@code ArrayList}.
      * @param list the {@code ArrayList} to bencode. 
-     * @return a {@code byte[]} containing the bencoded form of the {@code ArrayList}.
-     * @throws BencodingException if any of the objects in the list is not bencodable.
+     * @return a {@code byte[]} containing the bencoded form of the 
+     * {@code ArrayList}.
+     * @throws BencodingException if any of the objects in the list is not 
+     * bencodable.
      */
     @SuppressWarnings("unchecked")
-	private static final byte[] encodeList(ArrayList list) throws BencodingException
+	private static final byte[] encodeList(ArrayList list) 
+			throws BencodingException
     {
         byte[][] list_segments = new byte[list.size()][];
         for(int i = 0; i < list_segments.length;i++)
@@ -386,7 +427,8 @@ public final class Bencoder2
         int offset = 1;
         for(int i = 0; i < list_segments.length; i++)
         {
-            System.arraycopy(list_segments[i],0,bencoded_list,offset,list_segments[i].length);
+            System.arraycopy(list_segments[i],0,bencoded_list,offset,
+            		list_segments[i].length);
             offset += list_segments[i].length;
         }
         return bencoded_list;
@@ -395,16 +437,22 @@ public final class Bencoder2
     /**
      * Bencodes the specified {@code HashMap}.
      * @param dictionary the {@code HashMap} to bencode.
-     * @return a {@code byte[]} containing the bnecoded form of the {@code HashMap}.
-     * @throws BencodingException if any of the objecdts in the map is not bencodable.
+     * @return a {@code byte[]} containing the bnecoded form of the 
+     * {@code HashMap}.
+     * @throws BencodingException if any of the objecdts in the map is not 
+     * bencodable.
      */
-    private static final byte[] encodeDictionary(HashMap<ByteBuffer, Object> dictionary) throws BencodingException
+    private static final byte[] encodeDictionary(HashMap<ByteBuffer, 
+    		Object> dictionary) throws BencodingException
     {
-        TreeMap<ByteBuffer, Object> sorted_dictionary = new TreeMap<ByteBuffer, Object>();
+        TreeMap<ByteBuffer, Object> sorted_dictionary = new TreeMap<ByteBuffer, 
+        		Object>();
         sorted_dictionary.putAll(dictionary);
-        byte[][] dictionary_parts = new byte[sorted_dictionary.keySet().size()*2][];
+        byte[][] dictionary_parts = new byte[sorted_dictionary.keySet()
+                                             .size()*2][];
         int k = 0;
-        for(Iterator<ByteBuffer> i = sorted_dictionary.keySet().iterator(); i.hasNext();)
+        for(Iterator<ByteBuffer> i = sorted_dictionary.keySet().iterator(); 
+        		i.hasNext();)
         {
             ByteBuffer key = i.next();
             dictionary_parts[k++] = encodeString(key);
@@ -422,7 +470,8 @@ public final class Bencoder2
         int offset = 1;
         for(int i = 0; i < dictionary_parts.length; i++)
         {
-            System.arraycopy(dictionary_parts[i],0,bencoded_dictionary,offset,dictionary_parts[i].length);
+            System.arraycopy(dictionary_parts[i],0,bencoded_dictionary,offset,
+            		dictionary_parts[i].length);
             offset += dictionary_parts[i].length;
         }
         return bencoded_dictionary;

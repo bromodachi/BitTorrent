@@ -29,13 +29,16 @@ import java.util.Map;
 
 
 /**
- * This is a data structure class that extracts basic information from a bencoded torrent metainfo
- * file and stores it in public fields.&nbsp; Note that this class only works for torrent metainfo files
- * for a single-file torrent.
+ * This is a data structure class that extracts basic information from a 
+ * bencoded torrent metainfo file and stores it in public fields.&nbsp; 
+ * Note that this class only works for torrent metainfo files for a single-file
+ * torrent.
  * 
- * We should use this class for the first part of the project since it is already tested.
- * HOWEVER, this code only works for a single file case.
- * We will need to merge our code with this code for part two to handle multi-file download.
+ * Originally, this group wrote our own version of this class prior to the 
+ * distribution of this file on Sakai. We will use this class for the first 
+ * part of the project since it is already tested. HOWEVER, this code only 
+ * works for a single file case. We will need to merge our code with this code 
+ * for part two to handle multi-file download.
  *
  * @author Robert Moore II
  *
@@ -75,7 +78,8 @@ public class TorrentInfo
 	/**
 	 * ByteBuffer to retrieve the announce URL from the metainfo dictionary.
 	 */
-	public static final ByteBuffer KEY_ANNOUNCE = ByteBuffer.wrap(new byte[] {'a','n','n','o','u','n','c','e'});
+	public static final ByteBuffer KEY_ANNOUNCE = ByteBuffer.wrap(new byte[] 
+	{'a','n','n','o','u','n','c','e'});
 
 	/**
 	 * A byte array containing the raw bytes of the torrent metainfo file.
@@ -84,20 +88,23 @@ public class TorrentInfo
 
 	/**
 	 * The base dictionary of the torrent metainfo file.&nbsp;
-     * See <a href="http://www.bittorrent.org/beps/bep_0003.html">http://www.bittorrent.org/beps/bep_0003.html</a>
+     * See <a href="http://www.bittorrent.org/beps/bep_0003.html">
+     * http://www.bittorrent.org/beps/bep_0003.html</a>
      * for an explanation of what keys are available and how they map.
 	 */
 	public final Map<ByteBuffer,Object> torrent_file_map;
 
 	/**
 	 * The unbencoded info dictionary of the torrent metainfo file.&nbsp;
-     * See <a href="http://www.bittorrent.org/beps/bep_0003.html">http://www.bittorrent.org/beps/bep_0003.html</a> for
+     * See <a href="http://www.bittorrent.org/beps/bep_0003.html">
+     * http://www.bittorrent.org/beps/bep_0003.html</a> for
 	 * an explanation of what keys are available and how they map.
 	 */
 	public final Map<ByteBuffer,Object> info_map;
 
 	/**
-	 * The SHA-1 hash of the bencoded form of the info dictionary from the torrent metainfo file.
+	 * The SHA-1 hash of the bencoded form of the info dictionary from the 
+	 * torrent metainfo file.
 	 */
 	public final ByteBuffer info_hash;
 
@@ -107,7 +114,8 @@ public class TorrentInfo
 	public final URL announce_url;
 
 	/**
-	 * The default length of each piece in bytes.&nbsp; Note that the last piece may be irregularly-sized (less than the value of piece_length)
+	 * The default length of each piece in bytes.&nbsp; Note that the last piece
+	 * may be irregularly-sized (less than the value of piece_length)
 	 * if the file size is not a multiple of the piece size.
 	 */
 	public final int piece_length;
@@ -128,8 +136,10 @@ public class TorrentInfo
 	public final ByteBuffer[] piece_hashes;
 
 	/**
-	 * Creates a new TorrentInfo object from the specified byte array.  If the byte array is {@code null} or
-	 * has a length of 0(zero), then an {@code IllegalArgumentException} is thrown.
+	 * Creates a new TorrentInfo object from the specified byte array.  
+	 * If the byte array is {@code null} or
+	 * has a length of 0(zero), then an {@code IllegalArgumentException} is 
+	 * thrown.
 	 * @param torrent_file_bytes
 	 * @throws BencodingException
 	 */
@@ -138,18 +148,22 @@ public class TorrentInfo
 	{
 		// Make sure the input is valid
 		if(torrent_file_bytes == null || torrent_file_bytes.length == 0)
-			throw new IllegalArgumentException("Torrent file bytes must be non-null and have at least 1 byte.");
+			throw new IllegalArgumentException("Torrent file bytes must be "
+					+ "non-null and have at least 1 byte.");
 
 		// Assign the byte array
 		this.torrent_file_bytes = torrent_file_bytes;
 
 		// Assign the metainfo map
-		this.torrent_file_map = (Map<ByteBuffer,Object>)Bencoder2.decode(torrent_file_bytes);
+		this.torrent_file_map = (Map<ByteBuffer,Object>)Bencoder2.decode(
+				torrent_file_bytes);
 
 		// Try to extract the announce URL
-		ByteBuffer url_buff = (ByteBuffer)this.torrent_file_map.get(TorrentInfo.KEY_ANNOUNCE);
+		ByteBuffer url_buff = (ByteBuffer)this.torrent_file_map.get(
+				TorrentInfo.KEY_ANNOUNCE);
 		if(url_buff == null)
-			throw new BencodingException("Could not retrieve anounce URL from torrent metainfo.  Corrupt file?");
+			throw new BencodingException("Could not retrieve anounce URL from "
+					+ "torrent metainfo.  Corrupt file?");
 
 		try {
 			String url_string = new String(url_buff.array(), "ASCII");
@@ -167,10 +181,12 @@ public class TorrentInfo
 
 		// Try to extract the info dictionary
 		ByteBuffer info_bytes = Bencoder2.getInfoBytes(torrent_file_bytes);
-		Map<ByteBuffer,Object> info_map = (Map<ByteBuffer,Object>)this.torrent_file_map.get(TorrentInfo.KEY_INFO);
+		Map<ByteBuffer,Object> info_map = (Map<ByteBuffer,Object>)this.
+				torrent_file_map.get(TorrentInfo.KEY_INFO);
 
 		if(info_map == null)
-			throw new BencodingException("Could not extract info dictionary from torrent metainfo dictionary.  Corrupt file?");
+			throw new BencodingException("Could not extract info dictionary from"
+					+ " torrent metainfo dictionary.  Corrupt file?");
 		this.info_map = info_map;
 
 		// Try to generate the info hash value
@@ -186,15 +202,19 @@ public class TorrentInfo
 		}
 
 		// Extract the piece length from the info dictionary
-		Integer piece_length = (Integer)this.info_map.get(TorrentInfo.KEY_PIECE_LENGTH);
+		Integer piece_length = 
+				(Integer)this.info_map.get(TorrentInfo.KEY_PIECE_LENGTH);
 		if(piece_length == null)
-			throw new BencodingException("Could not extract piece length from info dictionary.  Corrupt file?");
+			throw new BencodingException("Could not extract piece length from "
+					+ "info dictionary.  Corrupt file?");
 		this.piece_length = piece_length.intValue();
 
 		// Extract the file name from the info dictionary
-		ByteBuffer name_bytes = (ByteBuffer)this.info_map.get(TorrentInfo.KEY_NAME);
+		ByteBuffer name_bytes = (ByteBuffer)this.info_map.
+				get(TorrentInfo.KEY_NAME);
 		if(name_bytes == null)
-			throw new BencodingException("Could not retrieve file name from info dictionary.  Corrupt file?");
+			throw new BencodingException("Could not retrieve file name from "
+					+ "info dictionary.  Corrupt file?");
 		try {
 			this.file_name = new String(name_bytes.array(),"ASCII");
 		}
@@ -204,20 +224,25 @@ public class TorrentInfo
 		}
 
 		// Extract the file length from the info dictionary
-		Integer file_length = (Integer)this.info_map.get(TorrentInfo.KEY_LENGTH);
+		Integer file_length = (Integer)this.info_map.
+				get(TorrentInfo.KEY_LENGTH);
 		if(file_length == null)
-			throw new BencodingException("Could not extract file length from info dictionary.  Corrupt file?");
+			throw new BencodingException("Could not extract file length from "
+					+ "info dictionary.  Corrupt file?");
 		this.file_length = file_length.intValue();
 
 		// Extract the piece hashes from the info dictionary
-		ByteBuffer all_hashes = (ByteBuffer)this.info_map.get(TorrentInfo.KEY_PIECES);
+		ByteBuffer all_hashes = (ByteBuffer)this.info_map.
+				get(TorrentInfo.KEY_PIECES);
 		if(all_hashes == null)
-			throw new BencodingException("Could not extract piece hashes from info dictionary.  Corrupt file?");
+			throw new BencodingException("Could not extract piece hashes from "
+					+ "info dictionary.  Corrupt file?");
 		byte[] all_hashes_array = all_hashes.array();
 
-		// Verify that the length of the array is a multiple of 20 bytes (160 bits)
+		// Verify that the length of the array is a multiple of 20 bytes
 		if(all_hashes_array.length % 20 != 0)
-			throw new BencodingException("Piece hashes length is not a multiple of 20.  Corrupt file?");
+			throw new BencodingException("Piece hashes length is not a "
+					+ "multiple of 20.  Corrupt file?");
 		int num_pieces = all_hashes_array.length / 20;
 
 		// Copy the values of the piece hashes into the local field
@@ -228,12 +253,13 @@ public class TorrentInfo
 			System.arraycopy(all_hashes_array,i*20,temp_buff,0,20);
 			this.piece_hashes[i] = ByteBuffer.wrap(temp_buff);
 		}
-	}
+	}// End constructor
 	
 	public String toString(){
 		
 		// Not printed: ByteBuffer info_hash; 
-		//The SHA-1 hash of the bencoded form of the info dictionary from the torrent metainfo file.
+		//The SHA-1 hash of the bencoded form of the info dictionary from the 
+		//torrent metainfo file.
 		//System.out.println("piece_hashes length: "+ piece_hashes.length);
 		String info=(
 				"Url: " + announce_url + "\n" +
@@ -248,33 +274,34 @@ public class TorrentInfo
 				// (see Putting Bytes into a ByteBuffer)
 				bytes = new byte[piece_hashes[i].remaining()];
 
-				// transfer bytes from this buffer into the given destination array
+				// transfer bytes from this buffer into the given dest. array
 				piece_hashes[i].get(bytes, 0, bytes.length);
 				
 				// Retrieve all bytes in the buffer
 				piece_hashes[i].clear();
 				bytes = new byte[piece_hashes[i].capacity()];
 				 
-				// transfer bytes from this buffer into the given destination array
+				// transfer bytes from this buffer into the given dest. array
 				piece_hashes[i].get(bytes, 0, bytes.length);
 				
 				//convert the byte to hex format method 1
 		        StringBuffer sb = new StringBuffer();
 		        for (int j = 0; j < bytes.length; j++) {
-		        	sb.append(Integer.toString((bytes[j] & 0xff) + 0x100, 16).substring(1));
+		        	sb.append(Integer.toString(
+		        			(bytes[j] & 0xff) + 0x100, 16).substring(1));
 		        }
 		        
 		        info=info.concat("Hash "+i+": "+sb.toString()+"\n");
 			}
 			catch(Exception e)
 			{
-				System.err.println("\nUnsupportedEncodingException in toString method.");
+				System.err.println(
+						"\nUnsupportedEncodingException in toString method.");
 				e.printStackTrace();
 			}
 		}
 		
-		return info;
-		
-	}
+		return info;	
+	}// End toString()
 	
 }
