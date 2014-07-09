@@ -48,6 +48,8 @@ public class CommunicationTracker {
 	int complete;
 	int incomplete;
 
+	/* ================= Constructor =================== */
+	
 	public CommunicationTracker(TorrentInfo passTheTorrentFile) {
 		this.torrentInfo = passTheTorrentFile;
 		this.urlAddress = torrentInfo.announce_url;
@@ -57,6 +59,8 @@ public class CommunicationTracker {
 
 	}
 
+	/* ================= Getters ======================== */
+	
 	public ByteBuffer getClientID() {
 		return clientID;
 	}
@@ -68,7 +72,7 @@ public class CommunicationTracker {
 	public ArrayList<Peer> getPeersList() {
 		return peersList;
 	}
-
+	
 	public int getInterval() {
 		return interval;
 	}
