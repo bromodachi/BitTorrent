@@ -7,20 +7,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 
-
 public class RUBTClient {
-	
-	static ArrayList<Piece>  pieces = null;
-	
+
+	static ArrayList<Piece> pieces = null;
+
 	/**
-	 * This is the main client class for CS352, BitTorrent project 1
-	 * The program is designed to load a .torrent file, interface with a 
-	 * tracker and a single peer and will download a single file (a JPEG) from 
-	 * that peer. The file is then saved to a hard disk. All communication is 
-	 * done over TCP.
+	 * This is the main client class for CS352, BitTorrent project 1 The program
+	 * is designed to load a .torrent file, interface with a tracker and a
+	 * single peer and will download a single file (a JPEG) from that peer. The
+	 * file is then saved to a hard disk. All communication is done over TCP.
 	 * 
-	 * @param args The name of the .torrent file to be loaded and the name of 
-	 * the file to save the data to, using the proper path and file extensions.
+	 * @param args
+	 *            The name of the .torrent file to be loaded and the name of the
+	 *            file to save the data to, using the proper path and file
+	 *            extensions.
 	 * @throws IOException
 	 * @throws BencodingException
 	 */
@@ -30,7 +30,9 @@ public class RUBTClient {
 		TorrentInfo activeTorrent;
 
 		// Step 1 - Take the command line arguments
-		validateArgs(args);
+		if (!validateArgs(args)) {
+			return;
+		}
 
 		// Step 2 - Open the .torrent file and parse the data inside
 		byte[] torrentBytes = getFileBytes(args[0]);
@@ -41,9 +43,9 @@ public class RUBTClient {
 				activeTorrent);
 		communicationTracker.CommunicateWithTracker();
 
-		// Step 4 - Connect with the Peer.	
-		Thread thread = new Thread(new MessageHandler(pieces, 
-				communicationTracker.getPeersList().get(0), 
+		// Step 4 - Connect with the Peer.
+		Thread thread = new Thread(new MessageHandler(pieces,
+				communicationTracker.getPeersList().get(0),
 				activeTorrent.info_hash, communicationTracker.getClientID()));
 		thread.start();
 
@@ -53,16 +55,19 @@ public class RUBTClient {
 	 * Validates the command line arguments to see if the parameters are good.
 	 * The program exits if the arguments are bad.
 	 * 
-	 * @param args The command line arguments from the main method.
+	 * @param args
+	 *            The command line arguments from the main method.
+	 * @return
+	 * @throws IOException
 	 */
-	public static void validateArgs(String[] args) {
+	public static boolean validateArgs(String[] args) throws IOException {
 		// The main method requires two command line arguments:
 		// The name of the torrent file to load, and the name to the resulting
 		// file to save-as.
 		if (args.length != 2) {
 			System.err.println("Incorrect arguments. "
 					+ "Need 'somefile.torrent' 'picture.jpg'");
-			System.exit(1);
+			return false;
 		}
 
 		// Validating if arg[0] is a correct .torrent file extension
@@ -70,16 +75,26 @@ public class RUBTClient {
 				args[0].length());
 		if (!(torrentChecker.equals("torrent"))) {
 			System.err.println("Not a valid .torrent file, exiting program.");
+			return false;
 		}
+
+		File file = new File(args[1]);
+		if (!file.createNewFile()) {
+			System.err
+					.println("Error: file either already exists or could not be created");
+			return false;
+		}
+		return true;
 	}// END validateArgs
 
 	/**
-	 * Returns the byte array of a file to be used with Bencoder2.java. 
-	 * The byte array format is required as input to the Bencoder2 class.
-	 * Requires jre7 or greater.
+	 * Returns the byte array of a file to be used with Bencoder2.java. The byte
+	 * array format is required as input to the Bencoder2 class. Requires jre7
+	 * or greater.
 	 * 
 	 * 
-	 * @param file The file to be converted to a byte array
+	 * @param file
+	 *            The file to be converted to a byte array
 	 * @return byte The torrent file represented as a byte array
 	 * @throws IOException
 	 */
