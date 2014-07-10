@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -97,6 +98,12 @@ public class CommunicationTracker {
 		random.nextBytes(random_id);
 		return random_id;
 	}
+	
+	/**
+	 * Formats the string into the correct format for the torrent file
+	 * @param blah
+	 * @return the formatted string with the escape
+	 */
 
 	public String escape(String blah) {
 		String result = null;
@@ -109,12 +116,36 @@ public class CommunicationTracker {
 		return result;
 
 	}
-
+	/**
+	 *  Common behavior is for a downloader to try to listen on port 6881 
+	 *  and if that port is taken try 6882, then 6883, etc. 
+	 *  and give up after 6889.
+	 * @return a valid port.
+	 */
+	public int getPort(){
+		int givePort;
+		for(int i=6881;i<=6889;i++){
+			try {
+				ServerSocket testing=new ServerSocket(i);
+				return i;
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("Can't connection to port #: "+i+"\nattempting next port...");
+			}
+			
+		}
+		return -1;
+		
+	}
+	/**
+	 * Communicates with the tracker to get the list of peers
+	 */
 	@SuppressWarnings("unchecked")
 	public void CommunicateWithTracker() {
 
 		HttpURLConnection connection = null;
-
+		/*get connection port. */
+		int connectPort=getPort();
 		/* making the string fullUrl */
 		String fullUrl = "";
 		try {
@@ -123,7 +154,7 @@ public class CommunicationTracker {
 					+ "?info_hash="
 					+ escape(new String(torrentInfo.info_hash.array(),
 							"ISO-8859-1")) + "&peer_id="
-					+ escape(new String(clientID.array())) + "&port=" + 6681
+					+ escape(new String(clientID.array())) + "&port=" + connectPort
 					+ "&uploaded=" + uploaded + "&downloaded=" + downloaded
 					+ "&left=" + torrentInfo.file_length + "&event="
 					+ "started";
