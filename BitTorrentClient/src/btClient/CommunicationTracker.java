@@ -198,8 +198,6 @@ public class CommunicationTracker {
 				ByteBuffer ip = (ByteBuffer) temp.get(ByteBuffer
 						.wrap(new byte[] { 'i', 'p' }));
 				String ipS = new String(ip.array(), "ASCII");
-				System.out.println("peer id is: " + peerID + "\nIP is: " + ipS
-						+ "\nport: " + peer_port);
 
 				Peer temp_peer = new Peer(ipS, peerID, peer_port);
 				peersList.add(temp_peer);

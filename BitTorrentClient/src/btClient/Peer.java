@@ -31,7 +31,7 @@ public class Peer {
 		this.peer_id = peer_id;
 		this.port = port;
 		this.connection = null;
-		choked = false;
+		choked = true;
 	}
 
 	/* ================= Getters =================== */
@@ -150,9 +150,12 @@ public class Peer {
 		handshake.get(bytes, 0, handshake.capacity());
 
 		outputStream.write(bytes);
+		outputStream.flush();
 		/* get the response */
 		byte[] response = new byte[BtUtils.p2pHandshakeLength];
+		connection.setSoTimeout(10000);
 		inputStream.read(response);
+		connection.setSoTimeout(10000);
 		/* verify that it's the same info_hash */
 
 		if (isSameHash(info_hash.array(), response)) {
@@ -285,15 +288,11 @@ public class Peer {
 		message.putInt(block_offset);
 		message.putInt(block_length);
 		outputStream.write(message.array());
-		System.out.println("testing here");
 		try {
 			connection.setSoTimeout(10000);
 		} catch (SocketException e2) {
-			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
-		getMessage();
-
 	}
 
 	/**
@@ -338,7 +337,7 @@ public class Peer {
 			return null;
 		}
 		int length = ByteBuffer.wrap(length_prefix).getInt();
-		byte[] message = new byte[length - 1];
+		byte[] message = new byte[length];
 		inputStream.read(message, 0, length);
 		int index = 0;
 		while (index != message.length) {

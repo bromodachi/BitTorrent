@@ -101,9 +101,13 @@ public class BtUtils {
 	public static final byte[] MESSAGE_READ_ERROR = "failed to read message"
 			.getBytes();
 	/**
-	 * The prefix for the peer specified on the rutgers sakai page
+	 * The prefix for the peer specified on the rutgers sakai page (byte array)
 	 */
-	public static final byte[] RU_PEER_PREFIX = "RU1103".getBytes();
+	public static final byte[] RU_PEER_PREFIX = "-RU1103".getBytes();
+	/**
+	 * The prefix for the peer specified on the ruters sakai page (string)
+	 */
+	public static final String RU_PEER_PREFIX_STRING = "-RU1103";
 	/**
 	 * The number of bytes in a block 
 	 */

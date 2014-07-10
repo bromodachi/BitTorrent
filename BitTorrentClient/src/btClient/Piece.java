@@ -105,6 +105,25 @@ public class Piece {
 		return hash;
 	}
 
+	public int getOffset() {
+		return offset;
+	}
+
+	/**
+	 * Returns the index of the next incomplete block, returns -1 if all blocks
+	 * are complete
+	 * 
+	 * @return
+	 */
+	public int getNextBlockIndex() {
+		for (int i = 0; i < numBlocks; i++) {
+			if (!blocks[i]) {
+				return i;
+			}
+		}
+		return -1; // this should never happen
+	}
+
 	/**
 	 * Sets the complete value by checking if all blocks are downloaded
 	 */
