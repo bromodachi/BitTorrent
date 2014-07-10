@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.BitSet;
 
 /**
  * This class is tasked with deciding which piece to download next and handling
@@ -18,6 +19,7 @@ public class MessageHandler implements Runnable {
 	private final Peer peer;
 	private final ByteBuffer info_hash;
 	private final ByteBuffer clientID;
+	private boolean[] peer_has_piece;
 
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
 			ByteBuffer info_hash, ByteBuffer clientID) {
@@ -25,10 +27,14 @@ public class MessageHandler implements Runnable {
 		this.peer = peer;
 		this.info_hash = info_hash;
 		this.clientID = clientID;
+		this.peer_has_piece = new boolean[pieces.size()];
+		for (int i = 0; i < peer_has_piece.length; i++) {
+			peer_has_piece[i] = false;
+		}
 	}
 
 	public void run() {
-		if(peer == null){
+		if (peer == null) {
 			System.err.println("recieved null peer");
 			return;
 		}
@@ -40,9 +46,9 @@ public class MessageHandler implements Runnable {
 			return;
 		}
 
-		while (true) {
-			while(peer.isChoked()){
-				System.out.println("in choked loop");
+		while (peer.isConnected()) {
+			int i = 0;
+			while (peer.isChoked()) {
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
@@ -59,17 +65,18 @@ public class MessageHandler implements Runnable {
 					e.printStackTrace();
 					return;
 				}
+				System.out.println("here");
+				try {
+					handleMessage(peer.getMessage());
+				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (BtException e) {
+					e.printStackTrace();
+				}
+				System.out.println("here");
 
-					try {
-						handleMessage(peer.getMessage());
-					} catch (IOException e) {
-						e.printStackTrace();
-					} catch (BtException e) {
-						e.printStackTrace();
-					}
-				
 			}
-
+			System.out.println("connection closed");
 			return;
 
 		}
@@ -85,6 +92,7 @@ public class MessageHandler implements Runnable {
 	}
 
 	private void handleMessage(byte[] message) throws IOException, BtException {
+		System.out.println("handling " + message[0]);
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
 			System.out.println("Choke id");
@@ -107,12 +115,13 @@ public class MessageHandler implements Runnable {
 			break;
 		case BtUtils.BITFIELD_ID:
 			System.out.println("bitfield");
+			bitField(message);
 			try {
 				peer.sendInterested();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
+			System.out.println("sent interested");
 			break;
 		case BtUtils.REQUEST_ID:
 			// request
@@ -126,6 +135,24 @@ public class MessageHandler implements Runnable {
 
 		default:
 			System.out.println("You fucked up big time ");
+		}
+	}
+
+	/**
+	 * Reads a bitfield message and sets the boolean values of peer_has_piece
+	 * accordingly
+	 * 
+	 * @param message
+	 */
+	private void bitField(byte[] message) {
+		//remove message id from message
+		ByteBuffer bytes = ByteBuffer.wrap(new byte[message.length - 1]);
+		bytes.put(message, 1, message.length-1);
+		
+		//create bitset and set boolean values
+		BitSet bitSet = BitSet.valueOf(bytes);
+		for (int i = 0; i < bitSet.length(); i++) {
+			peer_has_piece[i] = bitSet.get(i);
 		}
 	}
 }

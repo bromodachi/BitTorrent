@@ -125,6 +125,7 @@ public class Peer {
 	public void establishConnection(ByteBuffer info_hash, ByteBuffer clientID)
 			throws UnknownHostException, IOException {
 		connection = new Socket(IP, port);
+		//connection.setKeepAlive(true);
 		try {
 			connection.setSoTimeout(10000);
 		} catch (SocketException e2) {
@@ -153,9 +154,7 @@ public class Peer {
 		outputStream.flush();
 		/* get the response */
 		byte[] response = new byte[BtUtils.p2pHandshakeLength];
-		connection.setSoTimeout(10000);
 		inputStream.read(response);
-		connection.setSoTimeout(10000);
 		/* verify that it's the same info_hash */
 
 		if (isSameHash(info_hash.array(), response)) {
@@ -211,7 +210,7 @@ public class Peer {
 	 * 
 	 * @throws IOException
 	 */
-	public void sendunchoke() throws IOException {
+	public void sendUnchoke() throws IOException {
 		byte[] bytes = new byte[BtUtils.UNCHOKE_LENGTH_PREFIX
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
@@ -232,7 +231,6 @@ public class Peer {
 		message.putInt(BtUtils.INTERESTED_LENGTH_PREFIX);
 		message.put((byte) (BtUtils.INTERESTED_ID));
 		outputStream.write(message.array());
-		getMessage();
 	}
 
 	/**
@@ -326,41 +324,32 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public byte[] getMessage() throws IOException {
-		byte[] length_prefix = new byte[BtUtils.PREFIX_LENGTH];
+	/*	byte[] length_prefix = new byte[BtUtils.PREFIX_LENGTH];
 		int bytesRead = inputStream.read(length_prefix, 0,
 				BtUtils.PREFIX_LENGTH);
 		if (bytesRead == 0) {
 			return null;
 		} else if (bytesRead != BtUtils.PREFIX_LENGTH) {
 			System.err
-					.println("Failed to read message length prefix: incorrect number of bytes");
+					.println("Failed to read message length prefix: incorrect number of bytes" + bytesRead);
 			return null;
 		}
-		int length = ByteBuffer.wrap(length_prefix).getInt();
+		int length = ByteBuffer.wrap(length_prefix).getInt();*/
+		int length = inputStream.readInt();
+/*		System.out.println("message length " + length);*/
 		byte[] message = new byte[length];
 		inputStream.read(message, 0, length);
 		int index = 0;
+/*		System.out.println("reading message");
 		while (index != message.length) {
-			System.out.println(message[index]);
-			index++;
-		}
-
+			System.out.print(message[index++]);
+			System.out.print(" ");
+		}*/
+		System.out.println("returning message id " + message[0]);
 		return message;
 	}
-
-	private void bitField(byte[] message) {
-		// TODO Auto-generated method stub
-
-		int index = 0;
-		System.out.println("inside bitfield method");
-		while (index != message.length - 1) {
-			if (Math.abs(message[index]) == 1) {
-				System.out.println("abs(message[index]) == 1");
-			} else {
-				System.out.println("message[index]" + message[index]);
-
-			}
-			index++;
-		}
+	
+	public boolean isConnected(){
+		return !connection.isClosed();
 	}
 }

@@ -145,11 +145,11 @@ public class RUBTClient {
 					* activeTorrent.piece_length, file));
 		}
 
-		if (leftover != 0) {
+	/*	if (leftover != 0) {
 			System.out.print(leftover);
 			numPieces++;
 			pieces.add(new Piece(numPieces, leftover, numPieces
 					* activeTorrent.piece_length, file));
-		}
+		}*/
 	}
 }
