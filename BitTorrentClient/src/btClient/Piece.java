@@ -209,7 +209,7 @@ public class Piece {
 		// write payload to file
 		FileChannel output = file.getChannel();
 		output.write(ByteBuffer.wrap(payload), (this.offset + block_offset));
-		output.close();
+		//output.close();
 		// update boolean values
 		blocks[block_index] = true;
 		setComplete();

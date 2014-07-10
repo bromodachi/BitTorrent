@@ -49,15 +49,26 @@ public class MessageHandler implements Runnable {
 		while (peer.isConnected()) {
 			int i = 0;
 			while (peer.isChoked()) {
+				System.out.println("top choked loop");
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
 					e.printStackTrace();
 				}
+				System.out.println("bottom choked loop");
 			}
 			while (!peer.isChoked()) {
 				System.out.println("in unchoked loop");
 				Piece curr = getNextPiece();
+				if(curr == null){
+					//send completed
+					try {
+						peer.disconnect();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					return;
+				}
 				try {
 					peer.sendRequest(curr.getIndex(), curr.getNextBlockIndex()
 							* BtUtils.BLOCK_SIZE, BtUtils.BLOCK_SIZE);
@@ -65,7 +76,6 @@ public class MessageHandler implements Runnable {
 					e.printStackTrace();
 					return;
 				}
-				System.out.println("here");
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException e) {
@@ -73,8 +83,8 @@ public class MessageHandler implements Runnable {
 				} catch (BtException e) {
 					e.printStackTrace();
 				}
-				System.out.println("here");
-
+				
+				System.out.println("bottom unchoked loop");
 			}
 			System.out.println("connection closed");
 			return;

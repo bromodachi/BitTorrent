@@ -67,11 +67,11 @@ public class Peer {
 		return connection;
 	}
 
-	public InputStream getInputStream() {
+	public DataInputStream getInputStream() {
 		return inputStream;
 	}
 
-	public OutputStream getOutputStream() {
+	public DataOutputStream getOutputStream() {
 		return outputStream;
 	}
 
@@ -107,6 +107,12 @@ public class Peer {
 	public void setChoked(boolean choked) {
 		this.choked = choked;
 	}
+	
+	public void disconnect() throws IOException{
+		inputStream.close();
+		outputStream.close();
+		connection.close();
+	}
 
 	/* =============== Methods ==================== */
 	/**
@@ -125,13 +131,6 @@ public class Peer {
 	public void establishConnection(ByteBuffer info_hash, ByteBuffer clientID)
 			throws UnknownHostException, IOException {
 		connection = new Socket(IP, port);
-		//connection.setKeepAlive(true);
-/*		try {
-			connection.setSoTimeout(10000);
-		} catch (SocketException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		}*/
 		inputStream = new DataInputStream(connection.getInputStream());
 		outputStream = new DataOutputStream(connection.getOutputStream());
 
@@ -154,9 +153,7 @@ public class Peer {
 		outputStream.flush();
 		/* get the response */
 		byte[] response = new byte[BtUtils.p2pHandshakeLength];
-/*		connection.setSoTimeout(10000);*/
 		inputStream.read(response);
-/*		connection.setSoTimeout(10000);*/
 		/* verify that it's the same info_hash */
 
 		if (isSameHash(info_hash.array(), response)) {
@@ -205,6 +202,7 @@ public class Peer {
 		message.putInt(BtUtils.CHOKE_LENGTH_PREFIX);
 		message.put((byte) (BtUtils.CHOKE_ID));
 		outputStream.write(message.array());
+		outputStream.flush();
 	}
 
 	/**
@@ -219,6 +217,7 @@ public class Peer {
 		message.putInt(BtUtils.UNCHOKE_LENGTH_PREFIX);
 		message.put((byte) (BtUtils.UNCHOKE_ID));
 		outputStream.write(message.array());
+		outputStream.flush();
 	}
 
 	/**
@@ -279,6 +278,7 @@ public class Peer {
 	 */
 	public void sendRequest(int index, int block_offset, int block_length)
 			throws IOException {
+		System.out.println("Requesting " + block_length + " bytes");
 		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
@@ -288,11 +288,6 @@ public class Peer {
 		message.putInt(block_offset);
 		message.putInt(block_length);
 		outputStream.write(message.array());
-/*		try {
-			connection.setSoTimeout(10000);
-		} catch (SocketException e2) {
-			e2.printStackTrace();
-		}*/
 	}
 
 	/**
@@ -315,6 +310,7 @@ public class Peer {
 		message.putInt(offset);
 		// add payload
 		outputStream.write(message.array());
+		outputStream.flush();
 	}
 
 	/**
@@ -327,14 +323,9 @@ public class Peer {
 	 */
 	public byte[] getMessage() throws IOException {
 		int length = inputStream.readInt();
+		System.out.println("retrieving: "+ length);
 		byte[] message = new byte[length];
-		inputStream.read(message, 0, length);
-		int index = 0;
-/*		System.out.println("reading message");
-		while (index != message.length) {
-			System.out.print(message[index++]);
-			System.out.print(" ");
-		}*/
+		inputStream.readFully(message, 0, length);
 		System.out.println("returning message id " + message[0]);
 		return message;
 	}

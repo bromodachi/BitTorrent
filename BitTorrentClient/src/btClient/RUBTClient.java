@@ -9,9 +9,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 
 public class RUBTClient {
-
-	static ArrayList<Piece> pieces = new ArrayList<Piece>();
-	static TorrentInfo activeTorrent;
 	static File file = null;
 
 	/**
@@ -34,12 +31,13 @@ public class RUBTClient {
 		if (!validateArgs(args)) {
 			return;
 		}
+		 ArrayList<Piece> pieces = new ArrayList<Piece>();
 
 		// Step 2 - Open the .torrent file and parse the data inside
 		byte[] torrentBytes = getFileBytes(args[0]);
-		activeTorrent = new TorrentInfo(torrentBytes);
+		TorrentInfo activeTorrent = new TorrentInfo(torrentBytes);
 
-		createPieces();
+		createPieces(pieces, activeTorrent);
 		System.out.println(pieces.size());
 
 		// Step 3 - Send an HTTP GET request to the tracker
@@ -135,7 +133,7 @@ public class RUBTClient {
 		return null;
 	}
 
-	private static void createPieces() throws FileNotFoundException {
+	private static void createPieces(ArrayList<Piece> pieces, TorrentInfo activeTorrent) throws FileNotFoundException {
 		int numPieces = activeTorrent.file_length / activeTorrent.piece_length;
 		int leftover = activeTorrent.file_length % activeTorrent.piece_length;
 
