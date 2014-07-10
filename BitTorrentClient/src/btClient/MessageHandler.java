@@ -103,14 +103,12 @@ public class MessageHandler implements Runnable {
 			peer.setChoked(false);
 			break;
 		case BtUtils.INTERESTED_ID:
-			// interested
 			System.out.println("interest id");
 			break;
 		case BtUtils.UNINTERESTED_ID:
 			System.out.println("uninterested id");
 			break;
 		case BtUtils.HAVE_ID:
-			// have
 			System.out.println("Have id");
 			break;
 		case BtUtils.BITFIELD_ID:

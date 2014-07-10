@@ -194,8 +194,9 @@ public class Piece {
 					"block offset does not reslove to a valid block index");
 		}
 		int block_index = block_offset / BtUtils.BLOCK_SIZE;
+		System.out.println("block index " + block_index);
 		byte[] payload = new byte[parser.remaining()];
-		parser.get(payload, parser.position(), parser.capacity());
+		parser.get(payload, 0, payload.length);
 		// Check if block is last block in piece
 		if (index == numBlocks - 1) {
 			if (payload.length > BtUtils.BLOCK_SIZE) {

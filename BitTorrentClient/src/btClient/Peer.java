@@ -126,12 +126,12 @@ public class Peer {
 			throws UnknownHostException, IOException {
 		connection = new Socket(IP, port);
 		//connection.setKeepAlive(true);
-		try {
+/*		try {
 			connection.setSoTimeout(10000);
 		} catch (SocketException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
-		}
+		}*/
 		inputStream = new DataInputStream(connection.getInputStream());
 		outputStream = new DataOutputStream(connection.getOutputStream());
 
@@ -154,7 +154,9 @@ public class Peer {
 		outputStream.flush();
 		/* get the response */
 		byte[] response = new byte[BtUtils.p2pHandshakeLength];
+/*		connection.setSoTimeout(10000);*/
 		inputStream.read(response);
+/*		connection.setSoTimeout(10000);*/
 		/* verify that it's the same info_hash */
 
 		if (isSameHash(info_hash.array(), response)) {
@@ -281,16 +283,16 @@ public class Peer {
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.REQUEST_LENGTH_PREFIX);
-		message.put((byte) (BtUtils.HAVE_ID));
+		message.put((byte) (BtUtils.REQUEST_ID));
 		message.putInt(index);
 		message.putInt(block_offset);
 		message.putInt(block_length);
 		outputStream.write(message.array());
-		try {
+/*		try {
 			connection.setSoTimeout(10000);
 		} catch (SocketException e2) {
 			e2.printStackTrace();
-		}
+		}*/
 	}
 
 	/**
@@ -324,19 +326,7 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public byte[] getMessage() throws IOException {
-	/*	byte[] length_prefix = new byte[BtUtils.PREFIX_LENGTH];
-		int bytesRead = inputStream.read(length_prefix, 0,
-				BtUtils.PREFIX_LENGTH);
-		if (bytesRead == 0) {
-			return null;
-		} else if (bytesRead != BtUtils.PREFIX_LENGTH) {
-			System.err
-					.println("Failed to read message length prefix: incorrect number of bytes" + bytesRead);
-			return null;
-		}
-		int length = ByteBuffer.wrap(length_prefix).getInt();*/
 		int length = inputStream.readInt();
-/*		System.out.println("message length " + length);*/
 		byte[] message = new byte[length];
 		inputStream.read(message, 0, length);
 		int index = 0;

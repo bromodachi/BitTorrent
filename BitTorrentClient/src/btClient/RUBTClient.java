@@ -129,7 +129,6 @@ public class RUBTClient {
 		for (Peer curr : peers) {
 			System.out.println(curr.getPeer_id());
 			if (curr.getPeer_id().startsWith(BtUtils.RU_PEER_PREFIX_STRING)) {
-				System.out.println(curr.getPeer_id());
 				return curr;
 			}
 		}
