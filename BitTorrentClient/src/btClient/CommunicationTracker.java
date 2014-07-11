@@ -154,6 +154,7 @@ public class CommunicationTracker {
 		if(connectPort==-1){
 			System.out.println("Couldn't connect to a port\nExiting...");
 			this.errors=true;
+			return;
 		}
 		/* making the string fullUrl */
 		String fullUrl = "";
