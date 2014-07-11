@@ -171,6 +171,8 @@ public class CommunicationTracker {
 		} catch (UnsupportedEncodingException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
+			errors=true;
+			return;
 		}
 		// String
 		// fullUrl="http://128.6.171.130:6969/announce?info_hash=%A2%B9%AAWU%A5z*%AD%7BSE%DE%C1%06%DE%AD%93%3AK&peer_id=GvdxnngWwbBpHRpCkrNP&port=6881&uploaded=0&downloaded=0&left=1246427&event=started";
@@ -182,6 +184,7 @@ public class CommunicationTracker {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 			errors=true;
+			return;
 		}
 		try {
 			/* http connection */
@@ -205,6 +208,7 @@ public class CommunicationTracker {
 				// TODO Auto-generated catch block
 				System.out.println("Bencoder couldn't get the map");
 				errors=true;
+				return;
 			}
 			if (responseMap.containsKey(ByteBuffer
 					.wrap(new byte[] { 'f', 'a', 'i', 'l', 'u', 'r', 'e', ' ',
@@ -256,6 +260,7 @@ public class CommunicationTracker {
 			// TODO Auto-generated catch block
 			System.out.println("Can't open the connection :c");
 			errors=true;
+			return;
 		}
 	}
 

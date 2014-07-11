@@ -20,6 +20,7 @@ public class MessageHandler implements Runnable {
 	private final ByteBuffer info_hash;
 	private final ByteBuffer clientID;
 	private boolean[] peer_has_piece;
+	private Piece curr;
 
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
 			ByteBuffer info_hash, ByteBuffer clientID) {
@@ -59,7 +60,7 @@ public class MessageHandler implements Runnable {
 			}
 			while (!peer.isChoked()) {
 				System.out.println("in unchoked loop");
-				Piece curr = getNextPiece();
+				curr = getNextPiece();
 				if(curr == null){
 					//send completed
 					try {
@@ -139,6 +140,7 @@ public class MessageHandler implements Runnable {
 			// piece
 			System.out.println("piece id");
 			pieces.get(ByteBuffer.wrap(message).getInt(1)).addBlock(message);
+			peer.sendHave(curr.getIndex());
 			break;
 
 		default:
