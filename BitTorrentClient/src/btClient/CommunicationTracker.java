@@ -48,6 +48,8 @@ public class CommunicationTracker {
 	int interval;
 	int complete;
 	int incomplete;
+	private int connectPort;
+	private boolean errors; //false if no errors.
 
 	/* ================= Constructor =================== */
 	
@@ -84,6 +86,9 @@ public class CommunicationTracker {
 
 	public int incomplete() {
 		return incomplete;
+	}
+	public boolean getError(){
+		return errors;
 	}
 
 	/**
@@ -145,7 +150,11 @@ public class CommunicationTracker {
 
 		HttpURLConnection connection = null;
 		/*get connection port. */
-		int connectPort=getPort();
+		connectPort=getPort();
+		if(connectPort==-1){
+			System.out.println("Couldn't connect to a port\nExiting...");
+			this.errors=true;
+		}
 		/* making the string fullUrl */
 		String fullUrl = "";
 		try {
@@ -168,8 +177,10 @@ public class CommunicationTracker {
 		try {
 			urlAddress = new URL(fullUrl);
 		} catch (MalformedURLException e1) {
+			//we should create
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
+			errors=true;
 		}
 		try {
 			/* http connection */
@@ -192,6 +203,7 @@ public class CommunicationTracker {
 			} catch (BencodingException e) {
 				// TODO Auto-generated catch block
 				System.out.println("Bencoder couldn't get the map");
+				errors=true;
 			}
 			if (responseMap.containsKey(ByteBuffer
 					.wrap(new byte[] { 'f', 'a', 'i', 'l', 'u', 'r', 'e', ' ',
@@ -201,6 +213,7 @@ public class CommunicationTracker {
 								' ', 'r', 'e', 'a', 's', 'o', 'n' }));
 				String errorMessage = new String(failure_bytes.array(), "ASCII");
 				System.out.println("Failure: " + errorMessage);
+				errors=true;
 				return;
 			}
 
@@ -219,6 +232,7 @@ public class CommunicationTracker {
 			if (peers == null) {
 				// real error message later
 				System.out.println("Peers were not extracted");
+				errors=true;
 				return;
 			}
 			peersList = new ArrayList<Peer>(peers.size());
@@ -240,6 +254,7 @@ public class CommunicationTracker {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.out.println("Can't open the connection :c");
+			errors=true;
 		}
 	}
 

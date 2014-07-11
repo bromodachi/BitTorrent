@@ -44,6 +44,11 @@ public class RUBTClient {
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
 		communicationTracker.CommunicateWithTracker();
+		//Any errors in the communication tracker, we shouldn't proceed.
+		if(communicationTracker.getError()){
+			System.out.println("Exiting....");
+			return;
+		}
 
 		// Step 4 - Connect with the Peer.
 		Thread thread = new Thread(new MessageHandler(pieces,
