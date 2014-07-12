@@ -23,7 +23,7 @@ public class RUBTClient {
 	 *            extensions.
 	 * @throws IOException
 	 * @throws BencodingException
-	 * @throws InterruptedException 
+	 * @throws InterruptedException
 	 */
 	public static void main(String[] args) throws IOException,
 			BencodingException, InterruptedException {
@@ -32,28 +32,23 @@ public class RUBTClient {
 		if (!validateArgs(args)) {
 			return;
 		}
-		 ArrayList<Piece> pieces = new ArrayList<Piece>();
+		ArrayList<Piece> pieces = new ArrayList<Piece>();
 
 		// Step 2 - Open the .torrent file and parse the data inside
 		byte[] torrentBytes = getFileBytes(args[0]);
 		TorrentInfo activeTorrent = new TorrentInfo(torrentBytes);
 
-//		createPieces(pieces, activeTorrent);
-//		System.out.println(pieces.size());
-
 		// Step 3 - Send an HTTP GET request to the tracker
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
 		communicationTracker.CommunicateWithTracker();
-		//Any errors in the communication tracker, we shouldn't proceed.
-		if(communicationTracker.getError()){
+		// Any errors in the communication tracker, we shouldn't proceed.
+		if (communicationTracker.getError()) {
 			System.out.println("Exiting....");
+			file.delete();
 			return;
 		}
-		if(createFile(args)==false){
-			System.out.println("An error has occurred.");
-			return;
-		}
+
 		createPieces(pieces, activeTorrent);
 		System.out.println(pieces.size());
 
@@ -63,30 +58,17 @@ public class RUBTClient {
 				activeTorrent.info_hash, communicationTracker.getClientID()));
 		thread.start();
 		thread.join();
-		for(Piece curr : pieces){
-			if(!curr.isComplete()){
-				System.err.println("Disconnected before downloading all pieces");
+		for (Piece curr : pieces) {
+			if (!curr.isComplete()) {
+				System.err
+						.println("Disconnected before downloading all pieces");
+				file.delete();
 				return;
 			}
 		}
 		System.out.println("Download successful");
 
 	}// END MAIN
-	
-	public static boolean createFile(String args[]){
-		file = new File(args[1]);
-		try {
-			if (!file.createNewFile()) {
-				System.err
-						.println("Error: file either already exists or could not be created");
-				return false;
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			return false;
-		}
-		return true;
-	}
 
 	/**
 	 * Validates the command line arguments to see if the parameters are good.
@@ -115,12 +97,12 @@ public class RUBTClient {
 			return false;
 		}
 
-		/*file = new File(args[1]);
+		file = new File(args[1]);
 		if (!file.createNewFile()) {
 			System.err
 					.println("Error: file either already exists or could not be created");
 			return false;
-		}*/
+		}
 		return true;
 	}// END validateArgs
 
@@ -168,7 +150,8 @@ public class RUBTClient {
 		return null;
 	}
 
-	private static void createPieces(ArrayList<Piece> pieces, TorrentInfo activeTorrent) throws FileNotFoundException {
+	private static void createPieces(ArrayList<Piece> pieces,
+			TorrentInfo activeTorrent) throws FileNotFoundException {
 		int numPieces = activeTorrent.file_length / activeTorrent.piece_length;
 		int leftover = activeTorrent.file_length % activeTorrent.piece_length;
 

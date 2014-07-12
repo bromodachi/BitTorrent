@@ -62,8 +62,8 @@ public class MessageHandler implements Runnable {
 			while (!choked) {
 				System.out.println("in unchoked loop");
 				Piece curr = getNextPiece();
-				if(curr == null){
-					//send completed
+				if (curr == null) {
+					// send completed
 					try {
 						peer.disconnect();
 					} catch (IOException e) {
@@ -72,8 +72,12 @@ public class MessageHandler implements Runnable {
 					return;
 				}
 				try {
-					System.out.println("sending request: Index:" +curr.getIndex() + " Offset:" + curr.getNextBlockOffest() + " length:" + curr.getNextBlockSize());
-					peer.sendRequest(curr.getIndex(), curr.getNextBlockOffest(), curr.getNextBlockSize());
+					System.out.println("sending request: Index:"
+							+ curr.getIndex() + " Offset:"
+							+ curr.getNextBlockOffest() + " length:"
+							+ curr.getNextBlockSize());
+					peer.sendRequest(curr.getIndex(),
+							curr.getNextBlockOffest(), curr.getNextBlockSize());
 				} catch (IOException e) {
 					e.printStackTrace();
 					return;
@@ -85,7 +89,7 @@ public class MessageHandler implements Runnable {
 				} catch (BtException e) {
 					e.printStackTrace();
 				}
-				
+
 				System.out.println("bottom unchoked loop");
 			}
 			System.out.println("connection closed");
@@ -94,9 +98,14 @@ public class MessageHandler implements Runnable {
 		}
 	}
 
+	/**
+	 * Returns the next piece that the peer has and has not yet been downloaded
+	 * 
+	 * @return the next piece to download
+	 */
 	private Piece getNextPiece() {
 		for (Piece curr : pieces) {
-			if (!curr.isComplete()) {
+			if (!curr.isComplete() && peer_has_piece[curr.getIndex()]) {
 				return curr;
 			}
 		}
@@ -140,7 +149,7 @@ public class MessageHandler implements Runnable {
 			Piece piece = pieces.get(ByteBuffer.wrap(message).getInt(1));
 			System.out.println("piece id " + piece.getIndex());
 			piece.addBlock(message);
-			if(piece.isComplete()){
+			if (piece.isComplete()) {
 				peer.sendHave(piece.getIndex());
 			}
 			break;
@@ -157,38 +166,44 @@ public class MessageHandler implements Runnable {
 	 * @param message
 	 */
 	private void bitField(byte[] message) {
-		//remove message id from message
+		// remove message id from message
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[message.length - 1]);
-		bytes.put(message, 1, message.length-1);
-		boolean [] bitSet=ConvertBitfieldToArray(bytes.array(),pieces.size());
-		for(int i = 0; i < bitSet.length; i++){
+		bytes.put(message, 1, message.length - 1);
+		boolean[] bitSet = ConvertBitfieldToArray(bytes.array(), pieces.size());
+		for (int i = 0; i < bitSet.length; i++) {
 			System.out.println("bitset " + i + " " + bitSet[i]);
 		}
 		for (int i = 0; i < peer_has_piece.length; i++) {
-			
+
 			peer_has_piece[i] = bitSet[i];
 		}
-		for(int i = 0; i < peer_has_piece.length; i++){
+		for (int i = 0; i < peer_has_piece.length; i++) {
 			System.out.println("peer has " + i + ":" + peer_has_piece[i]);
 		}
 	}
+
 	/**
-	 * Converts the bytes of a bitfield to a boolean array. If we get a 1
-	 * the peer has the piece.
+	 * Converts the bytes of a bitfield to a boolean array. If we get a 1 the
+	 * peer has the piece.
+	 * 
 	 * @param bitfield
+	 *            bitfield message received from the peer
 	 * @param numPieces
-	 * @return boolean
-	 */ 
-	public boolean[] ConvertBitfieldToArray(byte []bitfield, int numPieces){
-		boolean [] bool=new boolean[numPieces];
-		for( int i=0; i<bool.length;i++){
-		//from the java docs of a bitset :	((bb.get(bb.position()+n/8) & (1<<(n%8))) != 0) 
-			//uses bit wise &:
-			if(((bitfield[i/8] >> (7 - i % 8) & 1) ==1)){
-				System.out.println((bitfield[i/8] >> (7 - i % 8) &1)) ;
-				bool[i]=true;
+	 *            number of pieces to the downloading file
+	 * @return boolean array of boolean values representing the peers possesion
+	 *         of the peice corresponding to the array's index
+	 */
+	public boolean[] ConvertBitfieldToArray(byte[] bitfield, int numPieces) {
+		boolean[] bool = new boolean[numPieces];
+		for (int i = 0; i < bool.length; i++) {
+			// from the java docs of a bitset : ((bb.get(bb.position()+n/8) &
+			// (1<<(n%8))) != 0)
+			// uses bit wise &:
+			if (((bitfield[i / 8] >> (7 - i % 8) & 1) == 1)) {
+				System.out.println((bitfield[i / 8] >> (7 - i % 8) & 1));
+				bool[i] = true;
 			}
-			//don't need else, default value is false.
+			// don't need else, default value is false.
 		}
 		return bool;
 	}
