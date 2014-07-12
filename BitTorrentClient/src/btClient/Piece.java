@@ -124,6 +124,18 @@ public class Piece {
 		return -1; // this should never happen
 	}
 
+	public int getNextBlockSize() {
+		if (size % BtUtils.BLOCK_SIZE != 0
+				&& getNextBlockIndex() == numBlocks - 1) {
+			return size % BtUtils.BLOCK_SIZE;
+		}
+		return BtUtils.BLOCK_SIZE;
+	}
+
+	public int getNextBlockOffest() {
+		return getNextBlockIndex() * BtUtils.BLOCK_SIZE;
+	}
+
 	/**
 	 * Sets the complete value by checking if all blocks are downloaded
 	 */
@@ -198,18 +210,18 @@ public class Piece {
 		byte[] payload = new byte[parser.remaining()];
 		parser.get(payload, 0, payload.length);
 		// Check if block is last block in piece
-		if (index == numBlocks - 1) {
+		if (block_index == numBlocks - 1) {
 			if (payload.length > BtUtils.BLOCK_SIZE) {
 				throw new BtException(
 						"Last block in piece is longer than block size");
 			}
 		} else if (payload.length != BtUtils.BLOCK_SIZE) {
-			throw new BtException("Incorrect block size");
+			throw new BtException("Incorrect block size " + payload.length);
 		}
 		// write payload to file
 		FileChannel output = file.getChannel();
 		output.write(ByteBuffer.wrap(payload), (this.offset + block_offset));
-		//output.close();
+		// output.close();
 		// update boolean values
 		blocks[block_index] = true;
 		setComplete();

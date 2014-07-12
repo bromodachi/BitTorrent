@@ -20,7 +20,7 @@ public class MessageHandler implements Runnable {
 	private final ByteBuffer info_hash;
 	private final ByteBuffer clientID;
 	private boolean[] peer_has_piece;
-	private Piece curr;
+	private boolean choked;
 
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
 			ByteBuffer info_hash, ByteBuffer clientID) {
@@ -32,6 +32,7 @@ public class MessageHandler implements Runnable {
 		for (int i = 0; i < peer_has_piece.length; i++) {
 			peer_has_piece[i] = false;
 		}
+		choked = true;
 	}
 
 	public void run() {
@@ -49,7 +50,7 @@ public class MessageHandler implements Runnable {
 
 		while (peer.isConnected()) {
 			int i = 0;
-			while (peer.isChoked()) {
+			while (choked) {
 				System.out.println("top choked loop");
 				try {
 					handleMessage(peer.getMessage());
@@ -58,9 +59,9 @@ public class MessageHandler implements Runnable {
 				}
 				System.out.println("bottom choked loop");
 			}
-			while (!peer.isChoked()) {
+			while (!choked) {
 				System.out.println("in unchoked loop");
-				curr = getNextPiece();
+				Piece curr = getNextPiece();
 				if(curr == null){
 					//send completed
 					try {
@@ -71,8 +72,8 @@ public class MessageHandler implements Runnable {
 					return;
 				}
 				try {
-					peer.sendRequest(curr.getIndex(), curr.getNextBlockIndex()
-							* BtUtils.BLOCK_SIZE, BtUtils.BLOCK_SIZE);
+					System.out.println("sending request: Index:" +curr.getIndex() + " Offset:" + curr.getNextBlockOffest() + " length:" + curr.getNextBlockSize());
+					peer.sendRequest(curr.getIndex(), curr.getNextBlockOffest(), curr.getNextBlockSize());
 				} catch (IOException e) {
 					e.printStackTrace();
 					return;
@@ -107,11 +108,11 @@ public class MessageHandler implements Runnable {
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
 			System.out.println("Choke id");
-			peer.setChoked(true);
+			choked = true;
 			break;
 		case BtUtils.UNCHOKE_ID:
 			System.out.println("Unchoke id");
-			peer.setChoked(false);
+			choked = false;
 			break;
 		case BtUtils.INTERESTED_ID:
 			System.out.println("interest id");
@@ -133,14 +134,15 @@ public class MessageHandler implements Runnable {
 			System.out.println("sent interested");
 			break;
 		case BtUtils.REQUEST_ID:
-			// request
 			System.out.println("request id");
 			break;
 		case BtUtils.PIECE_ID:
-			// piece
-			System.out.println("piece id");
-			pieces.get(ByteBuffer.wrap(message).getInt(1)).addBlock(message);
-			peer.sendHave(curr.getIndex());
+			Piece piece = pieces.get(ByteBuffer.wrap(message).getInt(1));
+			System.out.println("piece id " + piece.getIndex());
+			piece.addBlock(message);
+			if(piece.isComplete()){
+				peer.sendHave(piece.getIndex());
+			}
 			break;
 
 		default:
@@ -158,11 +160,18 @@ public class MessageHandler implements Runnable {
 		//remove message id from message
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[message.length - 1]);
 		bytes.put(message, 1, message.length-1);
-		
+		bytes.rewind();		
 		//create bitset and set boolean values
 		BitSet bitSet = BitSet.valueOf(bytes);
-		for (int i = 0; i < bitSet.length(); i++) {
+		System.out.println("about to start bitSet " + bitSet.length() + " " + bitSet.size());
+		for(int i = 0; i < bitSet.size(); i++){
+			System.out.println("bitset " + i + " " + bitSet.get(i));
+		}
+		for (int i = 0; i < peer_has_piece.length; i++) {
 			peer_has_piece[i] = bitSet.get(i);
+		}
+		for(int i = 0; i < peer_has_piece.length; i++){
+			System.out.println("peer has " + i + ":" + peer_has_piece[i]);
 		}
 	}
 }

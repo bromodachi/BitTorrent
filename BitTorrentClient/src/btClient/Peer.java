@@ -278,7 +278,6 @@ public class Peer {
 	 */
 	public void sendRequest(int index, int block_offset, int block_length)
 			throws IOException {
-		System.out.println("Requesting " + block_length + " bytes");
 		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
