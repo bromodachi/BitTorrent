@@ -23,9 +23,10 @@ public class RUBTClient {
 	 *            extensions.
 	 * @throws IOException
 	 * @throws BencodingException
+	 * @throws InterruptedException 
 	 */
 	public static void main(String[] args) throws IOException,
-			BencodingException {
+			BencodingException, InterruptedException {
 
 		// Step 1 - Take the command line arguments
 		if (!validateArgs(args)) {
@@ -55,6 +56,14 @@ public class RUBTClient {
 				getTestPeer(communicationTracker.getPeersList()),
 				activeTorrent.info_hash, communicationTracker.getClientID()));
 		thread.start();
+		thread.join();
+		for(Piece curr : pieces){
+			if(!curr.isComplete()){
+				System.err.println("Disconnected before downloading all pieces");
+				return;
+			}
+		}
+		System.out.println("Download successful");
 
 	}// END MAIN
 
