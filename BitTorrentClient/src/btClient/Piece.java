@@ -149,16 +149,21 @@ public class Piece {
 		complete = true;
 	}
 
+	private void setHash(byte[] hash) {
+		this.hash = hash;
+	}
+
 	/**
-	 * Creates a SHA-1 hash for the piece (only if piece is completed)
+	 * Computes SHA-1 hash for this piece
 	 * 
+	 * @return SHA-1 hash if piece is completed, otherwise returns null
 	 * @throws IOException
 	 */
-	private void setHash() throws IOException {
+	private byte[] computeHash() throws IOException {
 		if (!complete) {
 			System.err
 					.println("Attempted to create hash for piece that is not complete");
-			return;
+			return null;
 		}
 		FileChannel input = file.getChannel();
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[size]);
@@ -168,9 +173,10 @@ public class Piece {
 			MessageDigest digest = MessageDigest.getInstance("SHA-1");
 			digest.update(bytes.array());
 			byte[] hash = digest.digest();
-			this.hash = hash;
+			return hash;
 		} catch (NoSuchAlgorithmException nsae) {
 			System.err.println("Algorithm not found");
+			return null;
 		}
 	}
 
@@ -227,7 +233,7 @@ public class Piece {
 		setComplete();
 		// create hash if complete
 		if (complete) {
-			setHash();
+			setHash(computeHash());
 		}
 	}
 }
