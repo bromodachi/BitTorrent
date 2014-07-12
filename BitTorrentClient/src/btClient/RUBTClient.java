@@ -38,8 +38,8 @@ public class RUBTClient {
 		byte[] torrentBytes = getFileBytes(args[0]);
 		TorrentInfo activeTorrent = new TorrentInfo(torrentBytes);
 
-		createPieces(pieces, activeTorrent);
-		System.out.println(pieces.size());
+//		createPieces(pieces, activeTorrent);
+//		System.out.println(pieces.size());
 
 		// Step 3 - Send an HTTP GET request to the tracker
 		CommunicationTracker communicationTracker = new CommunicationTracker(
@@ -50,6 +50,12 @@ public class RUBTClient {
 			System.out.println("Exiting....");
 			return;
 		}
+		if(createFile(args)==false){
+			System.out.println("An error has occurred.");
+			return;
+		}
+		createPieces(pieces, activeTorrent);
+		System.out.println(pieces.size());
 
 		// Step 4 - Connect with the Peer.
 		Thread thread = new Thread(new MessageHandler(pieces,
@@ -66,6 +72,21 @@ public class RUBTClient {
 		System.out.println("Download successful");
 
 	}// END MAIN
+	
+	public static boolean createFile(String args[]){
+		file = new File(args[1]);
+		try {
+			if (!file.createNewFile()) {
+				System.err
+						.println("Error: file either already exists or could not be created");
+				return false;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			return false;
+		}
+		return true;
+	}
 
 	/**
 	 * Validates the command line arguments to see if the parameters are good.
@@ -94,12 +115,12 @@ public class RUBTClient {
 			return false;
 		}
 
-		file = new File(args[1]);
+		/*file = new File(args[1]);
 		if (!file.createNewFile()) {
 			System.err
 					.println("Error: file either already exists or could not be created");
 			return false;
-		}
+		}*/
 		return true;
 	}// END validateArgs
 
