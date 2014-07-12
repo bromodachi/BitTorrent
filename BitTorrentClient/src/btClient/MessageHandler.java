@@ -160,18 +160,36 @@ public class MessageHandler implements Runnable {
 		//remove message id from message
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[message.length - 1]);
 		bytes.put(message, 1, message.length-1);
-		bytes.rewind();		
-		//create bitset and set boolean values
-		BitSet bitSet = BitSet.valueOf(bytes);
-		System.out.println("about to start bitSet " + bitSet.length() + " " + bitSet.size());
-		for(int i = 0; i < bitSet.size(); i++){
-			System.out.println("bitset " + i + " " + bitSet.get(i));
+		boolean [] bitSet=ConvertBitfieldToArray(bytes.array(),pieces.size());
+		for(int i = 0; i < bitSet.length; i++){
+			System.out.println("bitset " + i + " " + bitSet[i]);
 		}
 		for (int i = 0; i < peer_has_piece.length; i++) {
-			peer_has_piece[i] = bitSet.get(i);
+			
+			peer_has_piece[i] = bitSet[i];
 		}
 		for(int i = 0; i < peer_has_piece.length; i++){
 			System.out.println("peer has " + i + ":" + peer_has_piece[i]);
 		}
+	}
+	/**
+	 * Converts the bytes of a bitfield to a boolean array. If we get a 1
+	 * the peer has the piece.
+	 * @param bitfield
+	 * @param numPieces
+	 * @return boolean
+	 */ 
+	public boolean[] ConvertBitfieldToArray(byte []bitfield, int numPieces){
+		boolean [] bool=new boolean[numPieces];
+		for( int i=0; i<bool.length;i++){
+		//from the java docs of a bitset :	((bb.get(bb.position()+n/8) & (1<<(n%8))) != 0) 
+			//uses bit wise &:
+			if(((bitfield[i/8] >> (7 - i % 8) & 1) ==1)){
+				System.out.println((bitfield[i/8] >> (7 - i % 8) &1)) ;
+				bool[i]=true;
+			}
+			//don't need else, default value is false.
+		}
+		return bool;
 	}
 }
