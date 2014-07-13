@@ -153,6 +153,9 @@ public class MessageHandler implements Runnable {
 			piece.addBlock(message);
 			if (piece.isComplete()) {
 				peer.sendHave(piece.getIndex());
+				if(!piece.compareTo(torrent.piece_hashes[piece.getIndex()].array())){
+					//what do you want to do if there's an error
+				}
 			//	System.out.println("Comparing pieces: "+piece.compareTo(torrent.piece_hashes[piece.getIndex()].array()));
 			}
 			break;
