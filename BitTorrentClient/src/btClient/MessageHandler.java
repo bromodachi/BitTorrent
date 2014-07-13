@@ -21,7 +21,12 @@ public class MessageHandler implements Runnable {
 	private final ByteBuffer clientID;
 	private boolean[] peer_has_piece;
 	private boolean choked;
+	private boolean errors;
 	private TorrentInfo torrent;
+	
+	public boolean getErrors(){
+		return this.errors;
+	}
 
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
 			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
@@ -49,20 +54,20 @@ public class MessageHandler implements Runnable {
 			System.err.println(e.getMessage());
 			return;
 		}
-
+		if(peer.getExchangeMessage()){
 		while (peer.isConnected()) {
 			int i = 0;
 			while (choked) {
-				System.out.println("top choked loop");
+		//		System.out.println("top choked loop");
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
 					e.printStackTrace();
 				}
-				System.out.println("bottom choked loop");
+			//	System.out.println("bottom choked loop");
 			}
 			while (!choked) {
-				System.out.println("in unchoked loop");
+			//	System.out.println("in unchoked loop");
 				Piece curr = getNextPiece();
 				if (curr == null) {
 					// send completed
@@ -92,11 +97,16 @@ public class MessageHandler implements Runnable {
 					e.printStackTrace();
 				}
 
-				System.out.println("bottom unchoked loop");
+			//	System.out.println("bottom unchoked loop");
 			}
+			peer.closeEverything();
 			System.out.println("connection closed");
 			return;
 
+		}
+		}
+		else{
+			this.errors=true;
 		}
 	}
 
@@ -115,45 +125,45 @@ public class MessageHandler implements Runnable {
 	}
 
 	private void handleMessage(byte[] message) throws IOException, BtException {
-		System.out.println("handling " + message[0]);
+		//System.out.println("handling " + message[0]);
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
-			System.out.println("Choke id");
+		//	System.out.println("Choke id");
 			choked = true;
 			break;
 		case BtUtils.UNCHOKE_ID:
-			System.out.println("Unchoke id");
+		//	System.out.println("Unchoke id");
 			choked = false;
 			break;
 		case BtUtils.INTERESTED_ID:
-			System.out.println("interest id");
+		//	System.out.println("interest id");
 			break;
 		case BtUtils.UNINTERESTED_ID:
-			System.out.println("uninterested id");
+		//	System.out.println("uninterested id");
 			break;
 		case BtUtils.HAVE_ID:
-			System.out.println("Have id");
+		//	System.out.println("Have id");
 			break;
 		case BtUtils.BITFIELD_ID:
-			System.out.println("bitfield");
 			bitField(message);
 			try {
 				peer.sendInterested();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			System.out.println("sent interested");
 			break;
 		case BtUtils.REQUEST_ID:
 			System.out.println("request id");
 			break;
 		case BtUtils.PIECE_ID:
 			Piece piece = pieces.get(ByteBuffer.wrap(message).getInt(1));
-			System.out.println("piece id " + piece.getIndex());
-			piece.writeBlock(message);
-			// check piece for completeness
+			piece.addBlock(message);
 			if (piece.isComplete()) {
 				peer.sendHave(piece.getIndex());
+				if(!piece.compareTo(torrent.piece_hashes[piece.getIndex()].array())){
+					//what do you want to do if there's an error
+				}
+			//	System.out.println("Comparing pieces: "+piece.compareTo(torrent.piece_hashes[piece.getIndex()].array()));
 			}
 			break;
 
@@ -173,16 +183,16 @@ public class MessageHandler implements Runnable {
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[message.length - 1]);
 		bytes.put(message, 1, message.length - 1);
 		boolean[] bitSet = ConvertBitfieldToArray(bytes.array(), pieces.size());
-		for (int i = 0; i < bitSet.length; i++) {
+		/*for (int i = 0; i < bitSet.length; i++) {
 			System.out.println("bitset " + i + " " + bitSet[i]);
-		}
+		}*/
 		for (int i = 0; i < peer_has_piece.length; i++) {
 
 			peer_has_piece[i] = bitSet[i];
 		}
-		for (int i = 0; i < peer_has_piece.length; i++) {
+		/*for (int i = 0; i < peer_has_piece.length; i++) {
 			System.out.println("peer has " + i + ":" + peer_has_piece[i]);
-		}
+		}*/
 	}
 
 	/**
@@ -203,7 +213,6 @@ public class MessageHandler implements Runnable {
 			// (1<<(n%8))) != 0)
 			// uses bit wise &:
 			if (((bitfield[i / 8] >> (7 - i % 8) & 1) == 1)) {
-				System.out.println((bitfield[i / 8] >> (7 - i % 8) & 1));
 				bool[i] = true;
 			}
 			// don't need else, default value is false.
