@@ -25,6 +25,7 @@ public class Peer {
 	private DataInputStream inputStream;
 	private DataOutputStream outputStream;
 	private boolean choked;
+	private boolean exchangeMess=false;
 
 	public Peer(String IP, String peer_id, int port) {
 		this.IP = IP;
@@ -108,6 +109,10 @@ public class Peer {
 		this.choked = choked;
 	}
 	
+	public boolean getExchangeMessage(){
+		return this.exchangeMess;
+	}
+	
 	public void disconnect() throws IOException{
 		inputStream.close();
 		outputStream.close();
@@ -158,6 +163,13 @@ public class Peer {
 
 		if (isSameHash(info_hash.array(), response)) {
 			System.out.println("info hash verified");
+			this.exchangeMess=true;
+		}
+		else{
+			//we have to close the connection
+			System.out.println("We couldn't verify the handshake. Closing connection");
+			this.exchangeMess=false;
+			closeEverything();
 		}
 	}
 
@@ -322,14 +334,26 @@ public class Peer {
 	 */
 	public byte[] getMessage() throws IOException {
 		int length = inputStream.readInt();
-		System.out.println("retrieving: "+ length);
+	//	System.out.println("retrieving: "+ length);
 		byte[] message = new byte[length];
 		inputStream.readFully(message, 0, length);
-		System.out.println("returning message id " + message[0]);
+	//	System.out.println("returning message id " + message[0]);
 		return message;
 	}
 	
 	public boolean isConnected(){
 		return !connection.isClosed();
+	}
+	
+	public void closeEverything(){
+		try {
+			inputStream.close();
+			outputStream.close();
+			connection.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 }
