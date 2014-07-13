@@ -42,7 +42,7 @@ public class RUBTClient {
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
 		communicationTracker.CommunicateWithTracker("started");
-		// System.out.println(activeTorrent.toString());
+		//System.out.println(activeTorrent.toString());
 		// Any errors in the communication tracker, we shouldn't proceed.
 		if (communicationTracker.getError()) {
 			System.out.println("Exiting....");
@@ -51,26 +51,28 @@ public class RUBTClient {
 		}
 
 		createPieces(pieces, activeTorrent);
-		// System.out.println(pieces.size());
+		//System.out.println(pieces.size());
 
 		// Step 4 - Connect with the Peer.
-		Thread thread = new Thread(new MessageHandler(pieces,
+		MessageHandler theHandler=new MessageHandler(pieces,
 				getTestPeer(communicationTracker.getPeersList()),
 				activeTorrent.info_hash, communicationTracker.getClientID(),
-				activeTorrent));
+				activeTorrent);
+		Thread thread = new Thread(theHandler);
 		thread.start();
 		thread.join();
+		if(theHandler.getErrors()){
+			System.err
+			.println("Error at handshake");
+			file.delete();
+			return;
+		}
 		for (Piece curr : pieces) {
 			if (!curr.isComplete()) {
 				System.err
 						.println("Disconnected before downloading all pieces");
 				file.delete();
 				return;
-			}
-			if (!curr.checkHash(activeTorrent.piece_hashes[curr.getIndex()]
-					.array())) {
-				System.err.println("ERROR: Invalid hash detected for piece #"
-						+ curr.getIndex() + " file may be corrupted");
 			}
 		}
 		communicationTracker.CommunicateWithTracker("completed");
@@ -150,7 +152,7 @@ public class RUBTClient {
 	public static Peer getTestPeer(ArrayList<Peer> peers) {
 		ByteBuffer prefix;
 		for (Peer curr : peers) {
-			System.out.println(curr.getPeer_id());
+	
 			if (curr.getPeer_id().startsWith(BtUtils.RU_PEER_PREFIX_STRING)) {
 				return curr;
 			}
@@ -169,10 +171,10 @@ public class RUBTClient {
 		}
 
 		if (leftover != 0) {
-			System.out.print(leftover);
+	//		System.out.print(leftover);
 			pieces.add(new Piece(numPieces, leftover, numPieces
 					* activeTorrent.piece_length, file));
 		}
-		System.out.println("created pieces: " + pieces.size());
+	//	System.out.println("created pieces: " + pieces.size());
 	}
 }
