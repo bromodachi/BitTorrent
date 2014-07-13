@@ -150,13 +150,10 @@ public class MessageHandler implements Runnable {
 		case BtUtils.PIECE_ID:
 			Piece piece = pieces.get(ByteBuffer.wrap(message).getInt(1));
 			System.out.println("piece id " + piece.getIndex());
-			piece.addBlock(message);
+			piece.writeBlock(message);
+			// check piece for completeness
 			if (piece.isComplete()) {
 				peer.sendHave(piece.getIndex());
-				if(!piece.compareTo(torrent.piece_hashes[piece.getIndex()].array())){
-					//what do you want to do if there's an error
-				}
-			//	System.out.println("Comparing pieces: "+piece.compareTo(torrent.piece_hashes[piece.getIndex()].array()));
 			}
 			break;
 

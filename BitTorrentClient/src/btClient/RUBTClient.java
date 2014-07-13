@@ -42,7 +42,7 @@ public class RUBTClient {
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
 		communicationTracker.CommunicateWithTracker("started");
-		//System.out.println(activeTorrent.toString());
+		// System.out.println(activeTorrent.toString());
 		// Any errors in the communication tracker, we shouldn't proceed.
 		if (communicationTracker.getError()) {
 			System.out.println("Exiting....");
@@ -51,7 +51,7 @@ public class RUBTClient {
 		}
 
 		createPieces(pieces, activeTorrent);
-		//System.out.println(pieces.size());
+		// System.out.println(pieces.size());
 
 		// Step 4 - Connect with the Peer.
 		Thread thread = new Thread(new MessageHandler(pieces,
@@ -66,6 +66,11 @@ public class RUBTClient {
 						.println("Disconnected before downloading all pieces");
 				file.delete();
 				return;
+			}
+			if (!curr.checkHash(activeTorrent.piece_hashes[curr.getIndex()]
+					.array())) {
+				System.err.println("ERROR: Invalid hash detected for piece #"
+						+ curr.getIndex() + " file may be corrupted");
 			}
 		}
 		communicationTracker.CommunicateWithTracker("completed");

@@ -171,7 +171,7 @@ public class Piece {
 		input.read(bytes, this.offset);
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-1");
-		//	digest.update(bytes.array());
+			// digest.update(bytes.array());
 			byte[] hash = digest.digest(bytes.array());
 			return hash;
 		} catch (NoSuchAlgorithmException nsae) {
@@ -189,7 +189,7 @@ public class Piece {
 	 *             thrown if invalid message is passed
 	 * @throws IOException
 	 */
-	public void addBlock(byte[] message) throws BtException, IOException {
+	public void writeBlock(byte[] message) throws BtException, IOException {
 		ByteBuffer parser = ByteBuffer.wrap(message);
 		byte message_id = parser.get();
 		if (message_id != BtUtils.PIECE_ID) {
@@ -227,18 +227,17 @@ public class Piece {
 		// write payload to file
 		FileChannel output = file.getChannel();
 		output.write(ByteBuffer.wrap(payload), (this.offset + block_offset));
-		// output.close();
 		// update boolean values
 		blocks[block_index] = true;
 		setComplete();
 		// create hash if complete
 		if (complete) {
 			setHash(computeHash());
-			
+
 		}
 	}
 
-	public boolean compareTo(byte [] p) {
+	public boolean checkHash(byte[] p) {
 		return Arrays.equals(this.hash, p);
 	}
 }
