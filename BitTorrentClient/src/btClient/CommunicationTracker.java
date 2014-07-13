@@ -37,6 +37,7 @@ public class CommunicationTracker {
 	public ArrayList<Peer> peersList;
 
 	/**/
+	String event="";
 	int uploaded = 0;
 	int downloaded = 0;
 	int left = 0;
@@ -146,8 +147,17 @@ public class CommunicationTracker {
 	 * Communicates with the tracker to get the list of peers
 	 */
 	@SuppressWarnings("unchecked")
-	public void CommunicateWithTracker() {
-
+	public void CommunicateWithTracker(String event) {
+		if(event.equals("completed")){
+			this.event="completed";
+			this.downloaded=torrentInfo.file_length;
+			this.left=0;
+		}
+		else if(event.equals("started")){
+			this.event="started";
+			this.downloaded=0;
+			this.left=torrentInfo.file_length;
+		}
 		HttpURLConnection connection = null;
 		/*get connection port. */
 		connectPort=getPort();
@@ -165,9 +175,9 @@ public class CommunicationTracker {
 					+ escape(new String(torrentInfo.info_hash.array(),
 							"ISO-8859-1")) + "&peer_id="
 					+ escape(new String(clientID.array())) + "&port=" + connectPort
-					+ "&uploaded=" + uploaded + "&downloaded=" + downloaded
-					+ "&left=" + torrentInfo.file_length + "&event="
-					+ "started";
+					+ "&uploaded=" + uploaded + "&downloaded=" + this.downloaded
+					+ "&left=" + this.left + "&event="
+					+ this.event;
 		} catch (UnsupportedEncodingException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();

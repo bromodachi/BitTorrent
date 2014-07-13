@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 /**
  * This class is tasked with managing a single piece of the downloaded file.
@@ -168,11 +169,10 @@ public class Piece {
 		FileChannel input = file.getChannel();
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[size]);
 		input.read(bytes, this.offset);
-
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-1");
-			digest.update(bytes.array());
-			byte[] hash = digest.digest();
+		//	digest.update(bytes.array());
+			byte[] hash = digest.digest(bytes.array());
 			return hash;
 		} catch (NoSuchAlgorithmException nsae) {
 			System.err.println("Algorithm not found");
@@ -234,6 +234,11 @@ public class Piece {
 		// create hash if complete
 		if (complete) {
 			setHash(computeHash());
+			
 		}
+	}
+
+	public boolean compareTo(byte [] p) {
+		return Arrays.equals(this.hash, p);
 	}
 }

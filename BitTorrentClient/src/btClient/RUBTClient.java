@@ -41,7 +41,8 @@ public class RUBTClient {
 		// Step 3 - Send an HTTP GET request to the tracker
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
-		communicationTracker.CommunicateWithTracker();
+		communicationTracker.CommunicateWithTracker("started");
+		//System.out.println(activeTorrent.toString());
 		// Any errors in the communication tracker, we shouldn't proceed.
 		if (communicationTracker.getError()) {
 			System.out.println("Exiting....");
@@ -50,12 +51,13 @@ public class RUBTClient {
 		}
 
 		createPieces(pieces, activeTorrent);
-		System.out.println(pieces.size());
+		//System.out.println(pieces.size());
 
 		// Step 4 - Connect with the Peer.
 		Thread thread = new Thread(new MessageHandler(pieces,
 				getTestPeer(communicationTracker.getPeersList()),
-				activeTorrent.info_hash, communicationTracker.getClientID()));
+				activeTorrent.info_hash, communicationTracker.getClientID(),
+				activeTorrent));
 		thread.start();
 		thread.join();
 		for (Piece curr : pieces) {
@@ -66,6 +68,7 @@ public class RUBTClient {
 				return;
 			}
 		}
+		communicationTracker.CommunicateWithTracker("completed");
 		System.out.println("Download successful");
 
 	}// END MAIN

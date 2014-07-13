@@ -21,9 +21,10 @@ public class MessageHandler implements Runnable {
 	private final ByteBuffer clientID;
 	private boolean[] peer_has_piece;
 	private boolean choked;
+	private TorrentInfo torrent;
 
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
-			ByteBuffer info_hash, ByteBuffer clientID) {
+			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
 		this.pieces = pieces;
 		this.peer = peer;
 		this.info_hash = info_hash;
@@ -33,6 +34,7 @@ public class MessageHandler implements Runnable {
 			peer_has_piece[i] = false;
 		}
 		choked = true;
+		this.torrent=torr;
 	}
 
 	public void run() {
@@ -151,6 +153,7 @@ public class MessageHandler implements Runnable {
 			piece.addBlock(message);
 			if (piece.isComplete()) {
 				peer.sendHave(piece.getIndex());
+			//	System.out.println("Comparing pieces: "+piece.compareTo(torrent.piece_hashes[piece.getIndex()].array()));
 			}
 			break;
 
