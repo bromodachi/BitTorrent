@@ -138,7 +138,7 @@ public class Peer {
 		connection = new Socket(IP, port);
 		inputStream = new DataInputStream(connection.getInputStream());
 		outputStream = new DataOutputStream(connection.getOutputStream());
-
+		connection.setSoTimeout(10000);
 		ByteBuffer handshake = ByteBuffer.allocate(BtUtils.p2pHandshakeLength);
 		handshake.put(BtUtils.p2pHandshakeHeader);
 		info_hash.rewind();
