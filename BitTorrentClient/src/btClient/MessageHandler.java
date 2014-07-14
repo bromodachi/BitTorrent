@@ -62,7 +62,8 @@ public class MessageHandler implements Runnable {
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
-					e.printStackTrace();
+					System.out.println("An error has encountered. Exiting...");
+					return;
 				}
 			//	System.out.println("bottom choked loop");
 			}
@@ -74,7 +75,8 @@ public class MessageHandler implements Runnable {
 					try {
 						peer.disconnect();
 					} catch (IOException e) {
-						e.printStackTrace();
+						System.out.println("An error has encountered. Exiting...");
+						return;
 					}
 					return;
 				}
@@ -86,15 +88,18 @@ public class MessageHandler implements Runnable {
 					peer.sendRequest(curr.getIndex(),
 							curr.getNextBlockOffest(), curr.getNextBlockSize());
 				} catch (IOException e) {
-					e.printStackTrace();
+					System.out.println("An error has encountered. Exiting...");
+					
 					return;
 				}
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException e) {
-					e.printStackTrace();
+					System.out.println("An error has encountered. Exiting...");
+					return;
 				} catch (BtException e) {
-					e.printStackTrace();
+					System.out.println("An error has encountered. Exiting...");
+					return;
 				}
 
 			//	System.out.println("bottom unchoked loop");
@@ -157,10 +162,10 @@ public class MessageHandler implements Runnable {
 			break;
 		case BtUtils.PIECE_ID:
 			Piece piece = pieces.get(ByteBuffer.wrap(message).getInt(1));
-			piece.addBlock(message);
+			piece.writeBlock(message);
 			if (piece.isComplete()) {
 				peer.sendHave(piece.getIndex());
-				if(!piece.compareTo(torrent.piece_hashes[piece.getIndex()].array())){
+				if(!piece.checkHash(torrent.piece_hashes[piece.getIndex()].array())){
 					//what do you want to do if there's an error
 				}
 			//	System.out.println("Comparing pieces: "+piece.compareTo(torrent.piece_hashes[piece.getIndex()].array()));
