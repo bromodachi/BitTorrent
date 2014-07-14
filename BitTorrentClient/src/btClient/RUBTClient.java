@@ -62,6 +62,7 @@ public class RUBTClient {
 		while (getPercentComplete(pieces) != 100){
 			System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
 		}
+		System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
 		System.out.println();
 			thread.join();
 		// Check download for completeness
