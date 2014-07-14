@@ -3,10 +3,7 @@ package btClient;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
@@ -133,7 +130,7 @@ public class Peer {
 	 * @throws UnknownHostException
 	 * @throws IOException
 	 */
-	public void establishConnection(ByteBuffer info_hash, ByteBuffer clientID)
+	public boolean establishConnection(ByteBuffer info_hash, ByteBuffer clientID)
 			throws UnknownHostException, IOException {
 		connection = new Socket(IP, port);
 		inputStream = new DataInputStream(connection.getInputStream());
@@ -161,16 +158,12 @@ public class Peer {
 		inputStream.read(response);
 		/* verify that it's the same info_hash */
 
-		if (isSameHash(info_hash.array(), response)) {
-			System.out.println("info hash verified");
-			this.exchangeMess=true;
-		}
-		else{
-			//we have to close the connection
-			System.out.println("We couldn't verify the handshake. Closing connection");
-			this.exchangeMess=false;
+		if (!isSameHash(info_hash.array(), response)) {
 			closeEverything();
+			System.err.println("FATAL ERROR: Tracker info_hash did not match file info_hash");
+			return false;
 		}
+		return true;
 	}
 
 	/**
@@ -212,7 +205,7 @@ public class Peer {
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.CHOKE_LENGTH_PREFIX);
-		message.put((byte) (BtUtils.CHOKE_ID));
+		message.put((BtUtils.CHOKE_ID));
 		outputStream.write(message.array());
 		outputStream.flush();
 	}
@@ -227,7 +220,7 @@ public class Peer {
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.UNCHOKE_LENGTH_PREFIX);
-		message.put((byte) (BtUtils.UNCHOKE_ID));
+		message.put((BtUtils.UNCHOKE_ID));
 		outputStream.write(message.array());
 		outputStream.flush();
 	}
@@ -242,7 +235,7 @@ public class Peer {
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.INTERESTED_LENGTH_PREFIX);
-		message.put((byte) (BtUtils.INTERESTED_ID));
+		message.put((BtUtils.INTERESTED_ID));
 		outputStream.write(message.array());
 	}
 
@@ -256,7 +249,7 @@ public class Peer {
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.UNINTERESTED_LENGTH_PREFIX);
-		message.put((byte) (BtUtils.UNINTERESTED_ID));
+		message.put((BtUtils.UNINTERESTED_ID));
 		outputStream.write(message.array());
 	}
 
@@ -272,7 +265,7 @@ public class Peer {
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.HAVE_LENGTH_PREFIX);
-		message.put((byte) (BtUtils.HAVE_ID));
+		message.put((BtUtils.HAVE_ID));
 		message.putInt(index);
 		outputStream.write(message.array());
 	}
@@ -294,7 +287,7 @@ public class Peer {
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.REQUEST_LENGTH_PREFIX);
-		message.put((byte) (BtUtils.REQUEST_ID));
+		message.put((BtUtils.REQUEST_ID));
 		message.putInt(index);
 		message.putInt(block_offset);
 		message.putInt(block_length);
@@ -316,7 +309,7 @@ public class Peer {
 				+ BtUtils.PREFIX_LENGTH + payloadLength];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.PIECE_LENGTH_PREFIX);
-		message.put((byte) (BtUtils.PIECE_ID));
+		message.put((BtUtils.PIECE_ID));
 		message.putInt(index);
 		message.putInt(offset);
 		// add payload
@@ -334,10 +327,8 @@ public class Peer {
 	 */
 	public byte[] getMessage() throws IOException {
 		int length = inputStream.readInt();
-	//	System.out.println("retrieving: "+ length);
 		byte[] message = new byte[length];
 		inputStream.readFully(message, 0, length);
-	//	System.out.println("returning message id " + message[0]);
 		return message;
 	}
 	

@@ -3,7 +3,6 @@ package btClient;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -42,7 +41,7 @@ public class RUBTClient {
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
 		communicationTracker.CommunicateWithTracker("started");
-		//System.out.println(activeTorrent.toString());
+		// System.out.println(activeTorrent.toString());
 		// Any errors in the communication tracker, we shouldn't proceed.
 		if (communicationTracker.getError()) {
 			System.out.println("Exiting....");
@@ -51,22 +50,21 @@ public class RUBTClient {
 		}
 
 		createPieces(pieces, activeTorrent);
-		//System.out.println(pieces.size());
 
 		// Step 4 - Connect with the Peer.
-		MessageHandler theHandler=new MessageHandler(pieces,
+		// Create new message handler and give it its own thread to run in
+		Thread thread = new Thread(new MessageHandler(pieces,
 				getTestPeer(communicationTracker.getPeersList()),
 				activeTorrent.info_hash, communicationTracker.getClientID(),
-				activeTorrent);
-		Thread thread = new Thread(theHandler);
+				activeTorrent));
 		thread.start();
-		thread.join();
-		if(theHandler.getErrors()){
-			System.err
-			.println("Error at handshake");
-			file.delete();
-			return;
+		System.out.print("downloading: " + getPercentComplete(pieces) + "%");
+		while (getPercentComplete(pieces) != 100){
+			System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
 		}
+		System.out.println();
+			thread.join();
+		// Check download for completeness
 		for (Piece curr : pieces) {
 			if (!curr.isComplete()) {
 				System.err
@@ -106,7 +104,7 @@ public class RUBTClient {
 			System.err.println("Not a valid .torrent file, exiting program.");
 			return false;
 		}
-
+		// check that a new file can be created with the second argument
 		file = new File(args[1]);
 		if (!file.createNewFile()) {
 			System.err
@@ -149,10 +147,15 @@ public class RUBTClient {
 		return torrentBytes;
 	}// END getFileBytes
 
+	/**
+	 * Returns the specified peer for testing the RUBTClient
+	 * 
+	 * @param peers
+	 *            the list of availible peers
+	 * @return
+	 */
 	public static Peer getTestPeer(ArrayList<Peer> peers) {
-		ByteBuffer prefix;
 		for (Peer curr : peers) {
-	
 			if (curr.getPeer_id().startsWith(BtUtils.RU_PEER_PREFIX_STRING)) {
 				return curr;
 			}
@@ -160,6 +163,16 @@ public class RUBTClient {
 		return null;
 	}
 
+	/**
+	 * Creates a new piece object for the total number of pieces in the file to
+	 * be downloaded and adds them to the pieces array list
+	 * 
+	 * @param pieces
+	 *            ArrayList of piece objects
+	 * @param activeTorrent
+	 *            TorrentInfo object for the active download
+	 * @throws FileNotFoundException
+	 */
 	private static void createPieces(ArrayList<Piece> pieces,
 			TorrentInfo activeTorrent) throws FileNotFoundException {
 		int numPieces = activeTorrent.file_length / activeTorrent.piece_length;
@@ -171,10 +184,18 @@ public class RUBTClient {
 		}
 
 		if (leftover != 0) {
-	//		System.out.print(leftover);
 			pieces.add(new Piece(numPieces, leftover, numPieces
 					* activeTorrent.piece_length, file));
 		}
-	//	System.out.println("created pieces: " + pieces.size());
+	}
+
+	private static int getPercentComplete(ArrayList<Piece> pieces) {
+		int completed = 0;
+		for (Piece curr : pieces) {
+			if (curr.isComplete()) {
+				completed++;
+			}
+		}
+		return (int) (((float) completed / (float) pieces.size())*100);
 	}
 }

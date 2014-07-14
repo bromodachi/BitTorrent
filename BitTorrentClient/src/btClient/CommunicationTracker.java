@@ -1,24 +1,17 @@
 package btClient;
 
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.lang.*;
 
 /*TO DO:
  * PORT MUST BE RANDOM(as in checking for 6681-6689
@@ -26,8 +19,6 @@ import java.lang.*;
 
 public class CommunicationTracker {
 	private TorrentInfo torrentInfo;
-	private final String IPAddress;
-	private int port;
 	private URL urlAddress;
 	int responseCode;
 	Map<ByteBuffer, Object> responseMap;
@@ -57,8 +48,8 @@ public class CommunicationTracker {
 	public CommunicationTracker(TorrentInfo passTheTorrentFile) {
 		this.torrentInfo = passTheTorrentFile;
 		this.urlAddress = torrentInfo.announce_url;
-		this.IPAddress = urlAddress.getHost();
-		this.port = urlAddress.getPort();
+		urlAddress.getHost();
+		urlAddress.getPort();
 		this.clientID = ByteBuffer.wrap(getRandomID());
 
 	}
@@ -129,14 +120,13 @@ public class CommunicationTracker {
 	 * @return a valid port.
 	 */
 	public int getPort(){
-		int givePort;
 		for(int i=6881;i<=6889;i++){
 			try {
+				@SuppressWarnings({ "unused", "resource" })
 				ServerSocket testing=new ServerSocket(i);
 				return i;
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				System.out.println("Can't connection to port #: "+i+"\nattempting next port...");
+				//try next port
 			}
 			
 		}
@@ -162,7 +152,7 @@ public class CommunicationTracker {
 		/*get connection port. */
 		connectPort=getPort();
 		if(connectPort==-1){
-			System.out.println("Couldn't connect to a port\nExiting...");
+			System.err.println("Couldn't connect to a port\nExiting...");
 			this.errors=true;
 			return;
 		}
@@ -184,9 +174,6 @@ public class CommunicationTracker {
 			errors=true;
 			return;
 		}
-		// String
-		// fullUrl="http://128.6.171.130:6969/announce?info_hash=%A2%B9%AAWU%A5z*%AD%7BSE%DE%C1%06%DE%AD%93%3AK&peer_id=GvdxnngWwbBpHRpCkrNP&port=6881&uploaded=0&downloaded=0&left=1246427&event=started";
-		System.out.println("Full URL: " + fullUrl);
 		try {
 			urlAddress = new URL(fullUrl);
 		} catch (MalformedURLException e1) {
@@ -216,7 +203,7 @@ public class CommunicationTracker {
 						.decode(response);
 			} catch (BencodingException e) {
 				// TODO Auto-generated catch block
-				System.out.println("Bencoder couldn't get the map");
+				System.err.println("Bencoder couldn't get the map");
 				errors=true;
 				return;
 			}
@@ -227,7 +214,7 @@ public class CommunicationTracker {
 						.wrap(new byte[] { 'f', 'a', 'i', 'l', 'u', 'r', 'e',
 								' ', 'r', 'e', 'a', 's', 'o', 'n' }));
 				String errorMessage = new String(failure_bytes.array(), "ASCII");
-				System.out.println("Failure: " + errorMessage);
+				System.err.println("Failure: " + errorMessage);
 				errors=true;
 				return;
 			}
@@ -246,7 +233,7 @@ public class CommunicationTracker {
 
 			if (peers == null) {
 				// real error message later
-				System.out.println("Peers were not extracted");
+				System.err.println("Peers were not extracted");
 				errors=true;
 				return;
 			}
@@ -268,7 +255,7 @@ public class CommunicationTracker {
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			System.out.println("Can't open the connection :c");
+			System.err.println("Can't open the connection :c");
 			errors=true;
 			return;
 		}

@@ -2,7 +2,6 @@ package btClient;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -55,6 +54,11 @@ public class Piece {
 	 * The SHA-1 hash of this piece (only available once piece is completed)
 	 */
 	private byte[] hash;
+	/**
+	 * Number of times this piece has been downloaded (piece gets redownloaded
+	 * if hash doesn't match when complete)
+	 */
+	private int downloadAttempts;
 
 	/**
 	 * Creates a new piece object with the given parameters
@@ -90,6 +94,7 @@ public class Piece {
 		}
 	}
 
+	/* ============== Getters ================== */
 	public boolean isComplete() {
 		return complete;
 	}
@@ -108,6 +113,10 @@ public class Piece {
 
 	public int getOffset() {
 		return offset;
+	}
+
+	public int getDownloadAttempts() {
+		return downloadAttempts;
 	}
 
 	/**
@@ -137,6 +146,7 @@ public class Piece {
 		return getNextBlockIndex() * BtUtils.BLOCK_SIZE;
 	}
 
+	/* ======================= SETTERS ======================= */
 	/**
 	 * Sets the complete value by checking if all blocks are downloaded
 	 */
@@ -154,6 +164,11 @@ public class Piece {
 		this.hash = hash;
 	}
 
+	public void incrementAttempts() {
+		downloadAttempts++;
+	}
+
+	/* =========== METHODS ========= */
 	/**
 	 * Computes SHA-1 hash for this piece
 	 * 
@@ -212,7 +227,6 @@ public class Piece {
 					"block offset does not reslove to a valid block index");
 		}
 		int block_index = block_offset / BtUtils.BLOCK_SIZE;
-		System.out.println("block index " + block_index);
 		byte[] payload = new byte[parser.remaining()];
 		parser.get(payload, 0, payload.length);
 		// Check if block is last block in piece
@@ -239,5 +253,12 @@ public class Piece {
 
 	public boolean checkHash(byte[] p) {
 		return Arrays.equals(this.hash, p);
+	}
+
+	public void clearBlocks() {
+		for (int i = 0; i < numBlocks; i++) {
+			blocks[i] = false;
+		}
+		complete = false;
 	}
 }

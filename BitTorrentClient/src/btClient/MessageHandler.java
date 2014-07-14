@@ -1,10 +1,8 @@
 package btClient;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.BitSet;
 
 /**
  * This class is tasked with deciding which piece to download next and handling
@@ -21,12 +19,7 @@ public class MessageHandler implements Runnable {
 	private final ByteBuffer clientID;
 	private boolean[] peer_has_piece;
 	private boolean choked;
-	private boolean errors;
 	private TorrentInfo torrent;
-	
-	public boolean getErrors(){
-		return this.errors;
-	}
 
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
 			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
@@ -39,79 +32,67 @@ public class MessageHandler implements Runnable {
 			peer_has_piece[i] = false;
 		}
 		choked = true;
-		this.torrent=torr;
+		this.torrent = torr;
 	}
 
+	@Override
 	public void run() {
 		if (peer == null) {
 			System.err.println("recieved null peer");
 			return;
 		}
 		try {
-			peer.establishConnection(info_hash, clientID);
+			if (!peer.establishConnection(info_hash, clientID)) {
+				return;
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.err.println(e.getMessage());
 			return;
 		}
-		if(peer.getExchangeMessage()){
 		while (peer.isConnected()) {
-			int i = 0;
 			while (choked) {
-		//		System.out.println("top choked loop");
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
-					System.out.println("An error has encountered. Exiting...");
+					System.err.println("An error has encountered. Exiting...");
 					return;
 				}
-			//	System.out.println("bottom choked loop");
 			}
 			while (!choked) {
-			//	System.out.println("in unchoked loop");
 				Piece curr = getNextPiece();
 				if (curr == null) {
 					// send completed
 					try {
 						peer.disconnect();
 					} catch (IOException e) {
-						System.out.println("An error has encountered. Exiting...");
+						System.err
+								.println("An error has encountered. Exiting...");
 						return;
 					}
 					return;
 				}
 				try {
-					System.out.println("sending request: Index:"
-							+ curr.getIndex() + " Offset:"
-							+ curr.getNextBlockOffest() + " length:"
-							+ curr.getNextBlockSize());
 					peer.sendRequest(curr.getIndex(),
 							curr.getNextBlockOffest(), curr.getNextBlockSize());
 				} catch (IOException e) {
-					System.out.println("An error has encountered. Exiting...");
-					
+					System.err.println("An error has encountered. Exiting...");
+
 					return;
 				}
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException e) {
-					System.out.println("An error has encountered. Exiting...");
+					System.err.println("An error has encountered. Exiting...");
 					return;
 				} catch (BtException e) {
-					System.out.println("An error has encountered. Exiting...");
+					System.err.println("An error has encountered. Exiting...");
 					return;
 				}
 
-			//	System.out.println("bottom unchoked loop");
 			}
 			peer.closeEverything();
-			System.out.println("connection closed");
 			return;
-
-		}
-		}
-		else{
-			this.errors=true;
 		}
 	}
 
@@ -130,24 +111,18 @@ public class MessageHandler implements Runnable {
 	}
 
 	private void handleMessage(byte[] message) throws IOException, BtException {
-		//System.out.println("handling " + message[0]);
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
-		//	System.out.println("Choke id");
 			choked = true;
 			break;
 		case BtUtils.UNCHOKE_ID:
-		//	System.out.println("Unchoke id");
 			choked = false;
 			break;
 		case BtUtils.INTERESTED_ID:
-		//	System.out.println("interest id");
 			break;
 		case BtUtils.UNINTERESTED_ID:
-		//	System.out.println("uninterested id");
 			break;
 		case BtUtils.HAVE_ID:
-		//	System.out.println("Have id");
 			break;
 		case BtUtils.BITFIELD_ID:
 			bitField(message);
@@ -158,22 +133,30 @@ public class MessageHandler implements Runnable {
 			}
 			break;
 		case BtUtils.REQUEST_ID:
-			System.out.println("request id");
 			break;
 		case BtUtils.PIECE_ID:
 			Piece piece = pieces.get(ByteBuffer.wrap(message).getInt(1));
 			piece.writeBlock(message);
 			if (piece.isComplete()) {
 				peer.sendHave(piece.getIndex());
-				if(!piece.checkHash(torrent.piece_hashes[piece.getIndex()].array())){
-					//what do you want to do if there's an error
+				// check that piece has downloaded correctly (check for correct hash)
+				if (!piece.checkHash(torrent.piece_hashes[piece.getIndex()]
+						.array())) {
+					// If hash mismatch, clear piece and try again
+					piece.clearBlocks();
+					piece.incrementAttempts();
+					// If piece has reach the max attempts print error and return
+					if (piece.getDownloadAttempts() >= BtUtils.MAX_DOWNLOAD_ATTEMPTS) {
+						System.err
+								.println("ERROR: Max download attempts reached, hash mismatch for piece #"
+										+ piece.getIndex());
+					}
 				}
-			//	System.out.println("Comparing pieces: "+piece.compareTo(torrent.piece_hashes[piece.getIndex()].array()));
 			}
 			break;
 
 		default:
-			System.out.println("You fucked up big time ");
+			System.err.println("ERROR: received invalid message from peer");
 		}
 	}
 
@@ -188,16 +171,10 @@ public class MessageHandler implements Runnable {
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[message.length - 1]);
 		bytes.put(message, 1, message.length - 1);
 		boolean[] bitSet = ConvertBitfieldToArray(bytes.array(), pieces.size());
-		/*for (int i = 0; i < bitSet.length; i++) {
-			System.out.println("bitset " + i + " " + bitSet[i]);
-		}*/
 		for (int i = 0; i < peer_has_piece.length; i++) {
 
 			peer_has_piece[i] = bitSet[i];
 		}
-		/*for (int i = 0; i < peer_has_piece.length; i++) {
-			System.out.println("peer has " + i + ":" + peer_has_piece[i]);
-		}*/
 	}
 
 	/**

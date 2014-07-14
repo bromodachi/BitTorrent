@@ -112,4 +112,6 @@ public class BtUtils {
 	 * The number of bytes in a block 
 	 */
 	public static final int BLOCK_SIZE = 16384;
+	
+	public static final int MAX_DOWNLOAD_ATTEMPTS = 3;
 }
