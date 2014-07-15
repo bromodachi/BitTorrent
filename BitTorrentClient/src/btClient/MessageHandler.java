@@ -6,9 +6,10 @@ import java.util.ArrayList;
 
 /**
  * This class is tasked with deciding which piece to download next and handling
- * the messages recieved from the peer
+ * the messages received from the peer. This class also handles the logic for
+ * deciding when to send a message to the peer and which message to send (the
+ * actual sending/receiving is handled by the peer class)
  * 
- * @author Cody
  * 
  */
 public class MessageHandler implements Runnable {
@@ -21,6 +22,21 @@ public class MessageHandler implements Runnable {
 	private boolean choked;
 	private TorrentInfo torrent;
 
+	/**
+	 * Returns a new message handler object, created with the given parameters
+	 * 
+	 * @param pieces
+	 *            ArrayList of pieces to be downloaded for the file
+	 * @param peer
+	 *            The peer for which this MessageHandler is responsible for
+	 *            communicating with
+	 * @param info_hash
+	 *            The info_hash given in the torrent file
+	 * @param clientID
+	 *            The local peer_id
+	 * @param torr
+	 *            The relevent TorrentInfo object for this download
+	 */
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
 			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
 		this.pieces = pieces;
@@ -35,6 +51,9 @@ public class MessageHandler implements Runnable {
 		this.torrent = torr;
 	}
 
+	/**
+	 * 
+	 */
 	@Override
 	public void run() {
 		if (peer == null) {
@@ -110,6 +129,14 @@ public class MessageHandler implements Runnable {
 		return null;
 	}
 
+	/**
+	 * Identifies the given message and decides how it should be handled
+	 * 
+	 * @param message
+	 *            The message to be handled
+	 * @throws IOException
+	 * @throws BtException
+	 */
 	private void handleMessage(byte[] message) throws IOException, BtException {
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
@@ -139,13 +166,15 @@ public class MessageHandler implements Runnable {
 			piece.writeBlock(message);
 			if (piece.isComplete()) {
 				peer.sendHave(piece.getIndex());
-				// check that piece has downloaded correctly (check for correct hash)
+				// check that piece has downloaded correctly (check for correct
+				// hash)
 				if (!piece.checkHash(torrent.piece_hashes[piece.getIndex()]
 						.array())) {
 					// If hash mismatch, clear piece and try again
 					piece.clearBlocks();
 					piece.incrementAttempts();
-					// If piece has reach the max attempts print error and return
+					// If piece has reach the max attempts print error and
+					// return
 					if (piece.getDownloadAttempts() >= BtUtils.MAX_DOWNLOAD_ATTEMPTS) {
 						System.err
 								.println("ERROR: Max download attempts reached, hash mismatch for piece #"

@@ -22,7 +22,7 @@ public class Peer {
 	private DataInputStream inputStream;
 	private DataOutputStream outputStream;
 	private boolean choked;
-	private boolean exchangeMess=false;
+	private boolean exchangeMess = false;
 
 	public Peer(String IP, String peer_id, int port) {
 		this.IP = IP;
@@ -105,12 +105,12 @@ public class Peer {
 	public void setChoked(boolean choked) {
 		this.choked = choked;
 	}
-	
-	public boolean getExchangeMessage(){
+
+	public boolean getExchangeMessage() {
 		return this.exchangeMess;
 	}
-	
-	public void disconnect() throws IOException{
+
+	public void disconnect() throws IOException {
 		inputStream.close();
 		outputStream.close();
 		connection.close();
@@ -160,7 +160,8 @@ public class Peer {
 
 		if (!isSameHash(info_hash.array(), response)) {
 			closeEverything();
-			System.err.println("FATAL ERROR: Tracker info_hash did not match file info_hash");
+			System.err
+					.println("FATAL ERROR: Tracker info_hash did not match file info_hash");
 			return false;
 		}
 		return true;
@@ -278,7 +279,7 @@ public class Peer {
 	 * @param block_offset
 	 *            offset of block being requested
 	 * @param block_length
-	 *           number of bytes in a typical block in the piece 
+	 *            number of bytes in a typical block in the piece
 	 * @throws IOException
 	 */
 	public void sendRequest(int index, int block_offset, int block_length)
@@ -331,12 +332,20 @@ public class Peer {
 		inputStream.readFully(message, 0, length);
 		return message;
 	}
-	
-	public boolean isConnected(){
+
+	/**
+	 * Checks if connection to peer is still valid
+	 * 
+	 * @return True if connection is open, otherwise false
+	 */
+	public boolean isConnected() {
 		return !connection.isClosed();
 	}
-	
-	public void closeEverything(){
+
+	/**
+	 * Closes all streams and connections
+	 */
+	public void closeEverything() {
 		try {
 			inputStream.close();
 			outputStream.close();
@@ -345,6 +354,6 @@ public class Peer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 	}
 }

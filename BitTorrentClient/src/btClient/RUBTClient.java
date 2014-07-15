@@ -7,14 +7,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 
+/**
+ * This is the main client class for CS352, BitTorrent project 1 The program is
+ * designed to load a .torrent file, interface with a tracker and a single peer
+ * and will download a single file (a JPEG) from that peer. The file is then
+ * saved to a hard disk. All communication is done over TCP.
+ * 
+ * @author Cody Goodman & Conrado Uraga
+ *
+ */
 public class RUBTClient {
 	static File file = null;
 
 	/**
-	 * This is the main client class for CS352, BitTorrent project 1 The program
-	 * is designed to load a .torrent file, interface with a tracker and a
-	 * single peer and will download a single file (a JPEG) from that peer. The
-	 * file is then saved to a hard disk. All communication is done over TCP.
+	 * This is the main method that is called upon program startup, this method
+	 * is tasked with validating the program's arguments and then instantiating
+	 * the other classes need to run the program. When the download is finished
+	 * this method verifies that it has completed successfully
 	 * 
 	 * @param args
 	 *            The name of the .torrent file to be loaded and the name of the
@@ -59,12 +68,13 @@ public class RUBTClient {
 				activeTorrent));
 		thread.start();
 		System.out.print("downloading: " + getPercentComplete(pieces) + "%");
-		while (getPercentComplete(pieces) != 100){
-			System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
+		while (getPercentComplete(pieces) != 100) {
+			System.out.print("\rdownloading: " + getPercentComplete(pieces)
+					+ "%");
 		}
 		System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
 		System.out.println();
-			thread.join();
+		thread.join();
 		// Check download for completeness
 		for (Piece curr : pieces) {
 			if (!curr.isComplete()) {
@@ -85,7 +95,7 @@ public class RUBTClient {
 	 * 
 	 * @param args
 	 *            The command line arguments from the main method.
-	 * @return
+	 * @return True if both arguments are valid, otherwise false
 	 * @throws IOException
 	 */
 	public static boolean validateArgs(String[] args) throws IOException {
@@ -153,7 +163,7 @@ public class RUBTClient {
 	 * 
 	 * @param peers
 	 *            the list of availible peers
-	 * @return
+	 * @return peer object for the test peer
 	 */
 	public static Peer getTestPeer(ArrayList<Peer> peers) {
 		for (Peer curr : peers) {
@@ -190,6 +200,14 @@ public class RUBTClient {
 		}
 	}
 
+	/**
+	 * Computes the percentage of the file that has been downloaded at a certain
+	 * moment of time
+	 * 
+	 * @param pieces
+	 *            ArrayList of all the piece objects for a file
+	 * @return int percent download complete
+	 */
 	private static int getPercentComplete(ArrayList<Piece> pieces) {
 		int completed = 0;
 		for (Piece curr : pieces) {
@@ -197,6 +215,6 @@ public class RUBTClient {
 				completed++;
 			}
 		}
-		return (int) (((float) completed / (float) pieces.size())*100);
+		return (int) (((float) completed / (float) pieces.size()) * 100);
 	}
 }

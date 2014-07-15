@@ -13,10 +13,13 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
 
-/*TO DO:
- * PORT MUST BE RANDOM(as in checking for 6681-6689
- * wireshark for testing*/
-
+/**
+ * This class is tasked with handling communications with the torrent tracker,
+ * such as establishing a connection, finding peers, and alerting the tracker to
+ * the current state of the download
+ * 
+ *
+ */
 public class CommunicationTracker {
 	private TorrentInfo torrentInfo;
 	private URL urlAddress;
@@ -28,7 +31,7 @@ public class CommunicationTracker {
 	public ArrayList<Peer> peersList;
 
 	/**/
-	String event="";
+	String event = "";
 	int uploaded = 0;
 	int downloaded = 0;
 	int left = 0;
@@ -41,10 +44,10 @@ public class CommunicationTracker {
 	int complete;
 	int incomplete;
 	private int connectPort;
-	private boolean errors; //false if no errors.
+	private boolean errors; // false if no errors.
 
 	/* ================= Constructor =================== */
-	
+
 	public CommunicationTracker(TorrentInfo passTheTorrentFile) {
 		this.torrentInfo = passTheTorrentFile;
 		this.urlAddress = torrentInfo.announce_url;
@@ -55,7 +58,7 @@ public class CommunicationTracker {
 	}
 
 	/* ================= Getters ======================== */
-	
+
 	public ByteBuffer getClientID() {
 		return clientID;
 	}
@@ -67,7 +70,7 @@ public class CommunicationTracker {
 	public ArrayList<Peer> getPeersList() {
 		return peersList;
 	}
-	
+
 	public int getInterval() {
 		return interval;
 	}
@@ -79,7 +82,8 @@ public class CommunicationTracker {
 	public int incomplete() {
 		return incomplete;
 	}
-	public boolean getError(){
+
+	public boolean getError() {
 		return errors;
 	}
 
@@ -95,9 +99,10 @@ public class CommunicationTracker {
 		random.nextBytes(random_id);
 		return random_id;
 	}
-	
+
 	/**
 	 * Formats the string into the correct format for the torrent file
+	 * 
 	 * @param blah
 	 * @return the formatted string with the escape
 	 */
@@ -113,47 +118,48 @@ public class CommunicationTracker {
 		return result;
 
 	}
+
 	/**
-	 *  Common behavior is for a downloader to try to listen on port 6881 
-	 *  and if that port is taken try 6882, then 6883, etc. 
-	 *  and give up after 6889.
+	 * Common behavior is for a downloader to try to listen on port 6881 and if
+	 * that port is taken try 6882, then 6883, etc. and give up after 6889.
+	 * 
 	 * @return a valid port.
 	 */
-	public int getPort(){
-		for(int i=6881;i<=6889;i++){
+	public int getPort() {
+		for (int i = 6881; i <= 6889; i++) {
 			try {
 				@SuppressWarnings({ "unused", "resource" })
-				ServerSocket testing=new ServerSocket(i);
+				ServerSocket testing = new ServerSocket(i);
 				return i;
 			} catch (IOException e) {
-				//try next port
+				// try next port
 			}
-			
+
 		}
 		return -1;
-		
+
 	}
+
 	/**
 	 * Communicates with the tracker to get the list of peers
 	 */
 	@SuppressWarnings("unchecked")
 	public void CommunicateWithTracker(String event) {
-		if(event.equals("completed")){
-			this.event="completed";
-			this.downloaded=torrentInfo.file_length;
-			this.left=0;
-		}
-		else if(event.equals("started")){
-			this.event="started";
-			this.downloaded=0;
-			this.left=torrentInfo.file_length;
+		if (event.equals("completed")) {
+			this.event = "completed";
+			this.downloaded = torrentInfo.file_length;
+			this.left = 0;
+		} else if (event.equals("started")) {
+			this.event = "started";
+			this.downloaded = 0;
+			this.left = torrentInfo.file_length;
 		}
 		HttpURLConnection connection = null;
-		/*get connection port. */
-		connectPort=getPort();
-		if(connectPort==-1){
+		/* get connection port. */
+		connectPort = getPort();
+		if (connectPort == -1) {
 			System.err.println("Couldn't connect to a port\nExiting...");
-			this.errors=true;
+			this.errors = true;
 			return;
 		}
 		/* making the string fullUrl */
@@ -164,23 +170,23 @@ public class CommunicationTracker {
 					+ "?info_hash="
 					+ escape(new String(torrentInfo.info_hash.array(),
 							"ISO-8859-1")) + "&peer_id="
-					+ escape(new String(clientID.array())) + "&port=" + connectPort
-					+ "&uploaded=" + uploaded + "&downloaded=" + this.downloaded
-					+ "&left=" + this.left + "&event="
+					+ escape(new String(clientID.array())) + "&port="
+					+ connectPort + "&uploaded=" + uploaded + "&downloaded="
+					+ this.downloaded + "&left=" + this.left + "&event="
 					+ this.event;
 		} catch (UnsupportedEncodingException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
-			errors=true;
+			errors = true;
 			return;
 		}
 		try {
 			urlAddress = new URL(fullUrl);
 		} catch (MalformedURLException e1) {
-			//we should create
+			// we should create
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
-			errors=true;
+			errors = true;
 			return;
 		}
 		try {
@@ -204,7 +210,7 @@ public class CommunicationTracker {
 			} catch (BencodingException e) {
 				// TODO Auto-generated catch block
 				System.err.println("Bencoder couldn't get the map");
-				errors=true;
+				errors = true;
 				return;
 			}
 			if (responseMap.containsKey(ByteBuffer
@@ -215,7 +221,7 @@ public class CommunicationTracker {
 								' ', 'r', 'e', 'a', 's', 'o', 'n' }));
 				String errorMessage = new String(failure_bytes.array(), "ASCII");
 				System.err.println("Failure: " + errorMessage);
-				errors=true;
+				errors = true;
 				return;
 			}
 
@@ -226,7 +232,6 @@ public class CommunicationTracker {
 			incomplete = (int) responseMap.get(ByteBuffer.wrap(new byte[] {
 					'i', 'n', 'c', 'o', 'm', 'p', 'l', 'e', 't', 'e' }));
 
-
 			peers = (ArrayList<Map<ByteBuffer, Object>>) responseMap
 					.get(ByteBuffer
 							.wrap(new byte[] { 'p', 'e', 'e', 'r', 's' }));
@@ -234,7 +239,7 @@ public class CommunicationTracker {
 			if (peers == null) {
 				// real error message later
 				System.err.println("Peers were not extracted");
-				errors=true;
+				errors = true;
 				return;
 			}
 			peersList = new ArrayList<Peer>(peers.size());
@@ -256,7 +261,7 @@ public class CommunicationTracker {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.err.println("Can't open the connection :c");
-			errors=true;
+			errors = true;
 			return;
 		}
 	}

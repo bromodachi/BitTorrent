@@ -95,26 +95,58 @@ public class Piece {
 	}
 
 	/* ============== Getters ================== */
+	/**
+	 * Checks whether the piece is completely downloaded
+	 * 
+	 * @return True if piece is complete, otherwise false
+	 */
 	public boolean isComplete() {
 		return complete;
 	}
 
+	/**
+	 * Gets the integer index of the piece
+	 * 
+	 * @return The zero based index of this piece relative to other pieces in
+	 *         the file
+	 */
 	public int getIndex() {
 		return index;
 	}
 
+	/**
+	 * 
+	 * @return The size of the piece in bytes
+	 */
 	public int getSize() {
 		return size;
 	}
 
+	/**
+	 * Gets the SHA-1 hash of the completed piece as a byte array
+	 * 
+	 * @return SHA-1 hash of the piece if completed, otherwise null
+	 */
 	public byte[] getHash() {
 		return hash;
 	}
 
+	/**
+	 * Gets the file offset in bytes of the begining of where this piece begins
+	 * 
+	 * @return File offset in bytes
+	 */
 	public int getOffset() {
 		return offset;
 	}
 
+	/**
+	 * Gets the number of attempts that have been made to download this piece, a
+	 * piece may have multiple attempts if one or more attempts have failed to
+	 * verify its SHA-1 hash
+	 * 
+	 * @return Number of attempts at downloading this piece
+	 */
 	public int getDownloadAttempts() {
 		return downloadAttempts;
 	}
@@ -123,7 +155,7 @@ public class Piece {
 	 * Returns the index of the next incomplete block, returns -1 if all blocks
 	 * are complete
 	 * 
-	 * @return
+	 * @return The zero based index of the next block to be downloaded
 	 */
 	public int getNextBlockIndex() {
 		for (int i = 0; i < numBlocks; i++) {
@@ -134,6 +166,12 @@ public class Piece {
 		return -1; // this should never happen
 	}
 
+	/**
+	 * Gets the size of the next block that is to be downloaded and written for
+	 * this piece
+	 * 
+	 * @return Block size in bytes
+	 */
 	public int getNextBlockSize() {
 		if (size % BtUtils.BLOCK_SIZE != 0
 				&& getNextBlockIndex() == numBlocks - 1) {
@@ -142,6 +180,11 @@ public class Piece {
 		return BtUtils.BLOCK_SIZE;
 	}
 
+	/**
+	 * Gets the file offset of the next block to be downloaded for this piece
+	 * 
+	 * @return The file offset in bytes
+	 */
 	public int getNextBlockOffest() {
 		return getNextBlockIndex() * BtUtils.BLOCK_SIZE;
 	}
@@ -164,6 +207,9 @@ public class Piece {
 		this.hash = hash;
 	}
 
+	/**
+	 * Increases the number of download attempts made by 1
+	 */
 	public void incrementAttempts() {
 		downloadAttempts++;
 	}
@@ -251,10 +297,21 @@ public class Piece {
 		}
 	}
 
-	public boolean checkHash(byte[] p) {
-		return Arrays.equals(this.hash, p);
+	/**
+	 * Checks if a given hash is equal to this piece's hash;
+	 * 
+	 * @param hash
+	 *            the SHA-1 hash that this piece is supposed to have
+	 * @return True if hashes match, otherwise false
+	 */
+	public boolean checkHash(byte[] hash) {
+		return Arrays.equals(this.hash, hash);
 	}
 
+	/**
+	 * Sets all true values for blocks[] to false (used to set this piece for
+	 * redownload if hash verification failed)
+	 */
 	public void clearBlocks() {
 		for (int i = 0; i < numBlocks; i++) {
 			blocks[i] = false;

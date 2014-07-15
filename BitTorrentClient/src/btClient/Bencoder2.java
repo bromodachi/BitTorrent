@@ -215,7 +215,8 @@ public final class Bencoder2
 	private static final Object[] decodeList(byte[] bencoded_bytes, int offset)
 			throws BencodingException
     {
-        ArrayList list = new ArrayList();
+        @SuppressWarnings("rawtypes")
+		ArrayList list = new ArrayList();
         offset++;
         Object[] vals;
         while(bencoded_bytes[offset] != (byte)'e')
@@ -238,7 +239,7 @@ public final class Bencoder2
      *          dictionary (as a {@code Map}, in positions 0 and 1, respectively
      * @throws BencodingException if the bencoded object is incorrectly encoded.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
 	private static final Object[] decodeDictionary(byte[] bencoded_bytes, 
 			int offset) throws BencodingException
     {
@@ -336,7 +337,7 @@ public final class Bencoder2
      * {@code ArrayList},
      *  		{@code Integer}, or {@code ByteBuffer}.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
 	public static final byte[] encode(Object o) throws BencodingException
     {
         if(o instanceof HashMap)
@@ -409,8 +410,7 @@ public final class Bencoder2
      * @throws BencodingException if any of the objects in the list is not 
      * bencodable.
      */
-    @SuppressWarnings("unchecked")
-	private static final byte[] encodeList(ArrayList list) 
+    private static final byte[] encodeList(@SuppressWarnings("rawtypes") ArrayList list) 
 			throws BencodingException
     {
         byte[][] list_segments = new byte[list.size()][];

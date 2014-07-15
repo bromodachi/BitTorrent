@@ -2,6 +2,11 @@ package btClient;
 
 public class BtException extends Throwable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2839762809338907133L;
+
 	public BtException() {
 		// TODO Auto-generated constructor stub
 	}
