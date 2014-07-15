@@ -114,4 +114,9 @@ public class BtUtils {
 	public static final int BLOCK_SIZE = 16384;
 	
 	public static final int MAX_DOWNLOAD_ATTEMPTS = 3;
+	
+	/**
+	 * 2 minutes into millseconds
+	 */
+	public static final int MAX_TIME=120000;
 }

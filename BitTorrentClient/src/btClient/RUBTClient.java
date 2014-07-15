@@ -85,6 +85,7 @@ public class RUBTClient {
 			}
 		}
 		communicationTracker.CommunicateWithTracker("completed");
+		communicationTracker.CommunicateWithTracker("stopped");
 		System.out.println("Download successful");
 
 	}// END MAIN
