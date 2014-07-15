@@ -190,7 +190,7 @@ public class CommunicationTracker {
 			errors = true;
 			return;
 		}
-		System.out.println(fullUrl);
+	
 		try {
 			urlAddress = new URL(fullUrl);
 		} catch (MalformedURLException e1) {
