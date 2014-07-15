@@ -1,3 +1,10 @@
+/* Internet Technologies 198:352:F6
+ * Rutgers University Summer 2014
+ * Programming Project: BitTorrent Client Part 1
+ * Team: Exception-all-ists
+ * Cody Goodman
+ * Conrado Uraga 
+ */
 package btClient;
 
 import java.io.DataInputStream;
@@ -18,7 +25,6 @@ import java.util.Random;
  * such as establishing a connection, finding peers, and alerting the tracker to
  * the current state of the download
  * 
- *
  */
 public class CommunicationTracker {
 	private TorrentInfo torrentInfo;
