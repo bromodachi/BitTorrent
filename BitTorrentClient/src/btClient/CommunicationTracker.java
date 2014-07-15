@@ -141,7 +141,12 @@ public class CommunicationTracker {
 	}
 
 	/**
-	 * Communicates with the tracker to get the list of peers
+	 * Communicates with the tracker to get the list of peers. 
+	 * @param event -> This takes an event to properly format the url and
+	 * communicate with the tracker.
+	 * Once we get the tracker, it extracts all the information in order to start
+	 * exchanging messages like getting the list of peers.
+	 * 
 	 */
 	@SuppressWarnings("unchecked")
 	public void CommunicateWithTracker(String event) {
