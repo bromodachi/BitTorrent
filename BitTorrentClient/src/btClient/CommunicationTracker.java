@@ -154,6 +154,11 @@ public class CommunicationTracker {
 			this.downloaded = 0;
 			this.left = torrentInfo.file_length;
 		}
+		else if(event.equals("stopped")){
+			this.event = "stopped";
+			this.downloaded = torrentInfo.file_length;
+			this.left = 0;
+		}
 		HttpURLConnection connection = null;
 		/* get connection port. */
 		connectPort = getPort();
@@ -176,16 +181,17 @@ public class CommunicationTracker {
 					+ this.event;
 		} catch (UnsupportedEncodingException e2) {
 			// TODO Auto-generated catch block
-			e2.printStackTrace();
+			
 			errors = true;
 			return;
 		}
+		System.out.println(fullUrl);
 		try {
 			urlAddress = new URL(fullUrl);
 		} catch (MalformedURLException e1) {
 			// we should create
 			// TODO Auto-generated catch block
-			e1.printStackTrace();
+		
 			errors = true;
 			return;
 		}
