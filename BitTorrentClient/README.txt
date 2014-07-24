@@ -16,3 +16,7 @@ Example:
 java  btClient/RUBTClient project1.torrent ding.png
 
 Sit back and relax for a minute while waiting for your file to download
+
+Write up:
+For the write up portion of our project please refer to the javadoc folder where you will find eclipse-generate javadoc files detailing everything about out project
+as well as a RUBTClient class dependencies.png file depicting a uml class dependencies diagram
