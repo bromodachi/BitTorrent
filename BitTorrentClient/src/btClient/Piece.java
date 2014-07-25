@@ -15,6 +15,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -49,10 +50,9 @@ public class Piece {
 	 */
 	private final RandomAccessFile file;
 	/**
-	 * An array of boolean values indicating whether or not each block index has
-	 * already been downloaded
+	 * An array list of {@link Block} objects associated with this piece
 	 */
-	private boolean[] blocks;
+	private ArrayList<Block> blocks;
 	/**
 	 * Starting position of this piece in the output file
 	 */
@@ -89,16 +89,26 @@ public class Piece {
 		this.file = new RandomAccessFile(file, "rw");
 		complete = false;
 		// find total number of blocks in piece
+		int last_block_size;
 		if (size % BtUtils.BLOCK_SIZE == 0) {
 			numBlocks = (size / BtUtils.BLOCK_SIZE);
+			last_block_size = BtUtils.BLOCK_SIZE;
 		} else {
 			numBlocks = (size / BtUtils.BLOCK_SIZE) + 1;
+			last_block_size = size % BtUtils.BLOCK_SIZE;
 		}
 		// Initialize boolean blocks array to false
-		blocks = new boolean[numBlocks];
+		blocks = new ArrayList<Block>(numBlocks);
 		for (int i = 0; i < numBlocks; i++) {
-			blocks[i] = false;
+			if (i == (numBlocks - 1)) {
+				blocks.add(new Block(index, i, i * BtUtils.BLOCK_SIZE,
+						last_block_size));
+			} else {
+				blocks.add(new Block(index, i, i * BtUtils.BLOCK_SIZE,
+						BtUtils.BLOCK_SIZE));
+			}
 		}
+
 	}
 
 	/* ============== Getters ================== */
@@ -158,42 +168,14 @@ public class Piece {
 		return downloadAttempts;
 	}
 
-	/**
-	 * Returns the index of the next incomplete block, returns -1 if all blocks
-	 * are complete
-	 * 
-	 * @return The zero based index of the next block to be downloaded
-	 */
-	public int getNextBlockIndex() {
-		for (int i = 0; i < numBlocks; i++) {
-			if (!blocks[i]) {
-				return i;
+
+	public Block getNextBlock() {
+		for (Block block : blocks) {
+			if(!block.isDownloaded() && block.tryLock()){
+				return block;
 			}
 		}
-		return -1; // this should never happen
-	}
-
-	/**
-	 * Gets the size of the next block that is to be downloaded and written for
-	 * this piece
-	 * 
-	 * @return Block size in bytes
-	 */
-	public int getNextBlockSize() {
-		if (size % BtUtils.BLOCK_SIZE != 0
-				&& getNextBlockIndex() == numBlocks - 1) {
-			return size % BtUtils.BLOCK_SIZE;
-		}
-		return BtUtils.BLOCK_SIZE;
-	}
-
-	/**
-	 * Gets the file offset of the next block to be downloaded for this piece
-	 * 
-	 * @return The file offset in bytes
-	 */
-	public int getNextBlockOffest() {
-		return getNextBlockIndex() * BtUtils.BLOCK_SIZE;
+		return null;
 	}
 
 	/* ======================= SETTERS ======================= */
@@ -201,8 +183,8 @@ public class Piece {
 	 * Sets the complete value by checking if all blocks are downloaded
 	 */
 	public void setComplete() {
-		for (boolean curr : blocks) {
-			if (curr == false) {
+		for (Block block : blocks) {
+			if (!block.isDownloaded()) {
 				complete = false;
 				return;
 			}
@@ -295,7 +277,7 @@ public class Piece {
 		FileChannel output = file.getChannel();
 		output.write(ByteBuffer.wrap(payload), (this.offset + block_offset));
 		// update boolean values
-		blocks[block_index] = true;
+		blocks.get(block_index).setDownloaded();
 		setComplete();
 		// create hash if complete
 		if (complete) {
@@ -320,8 +302,8 @@ public class Piece {
 	 * redownload if hash verification failed)
 	 */
 	public void clearBlocks() {
-		for (int i = 0; i < numBlocks; i++) {
-			blocks[i] = false;
+		for (Block block : blocks) {
+			block.setDownloaded(false);
 		}
 		complete = false;
 	}

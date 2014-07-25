@@ -28,6 +28,7 @@ public class MessageHandler implements Runnable {
 	private boolean[] peer_has_piece;
 	private boolean choked;
 	private TorrentInfo torrent;
+	private Block currBlock = null;
 
 	/**
 	 * Returns a new message handler object, created with the given parameters
@@ -67,6 +68,10 @@ public class MessageHandler implements Runnable {
 			System.err.println("recieved null peer");
 			return;
 		}
+		else
+		{
+			System.out.println("recieved peer: " + peer.getPeer_id());
+		}
 		try {
 			if (!peer.establishConnection(info_hash, clientID)) {
 				return;
@@ -76,6 +81,7 @@ public class MessageHandler implements Runnable {
 			System.err.println(e.getMessage());
 			return;
 		}
+		// need to add send bitfield
 		while (peer.isConnected()) {
 			while (choked) {
 				try {
@@ -86,9 +92,9 @@ public class MessageHandler implements Runnable {
 				}
 			}
 			while (!choked) {
-				Piece curr = getNextPiece();
-				if (curr == null) {
-					// send completed
+				Piece piece = getNextPiece();
+				if (piece == null) {
+					//no more pieces
 					try {
 						peer.disconnect();
 					} catch (IOException e) {
@@ -98,9 +104,11 @@ public class MessageHandler implements Runnable {
 					}
 					return;
 				}
+				currBlock = piece.getNextBlock();
+				
 				try {
-					peer.sendRequest(curr.getIndex(),
-							curr.getNextBlockOffest(), curr.getNextBlockSize());
+					peer.sendRequest(currBlock.getPieceIndex(),
+							currBlock.getOffset(), currBlock.getSize());
 				} catch (IOException e) {
 					System.err.println("An error has encountered. Exiting...");
 
@@ -128,9 +136,9 @@ public class MessageHandler implements Runnable {
 	 * @return the next piece to download
 	 */
 	private Piece getNextPiece() {
-		for (Piece curr : pieces) {
-			if (!curr.isComplete() && peer_has_piece[curr.getIndex()]) {
-				return curr;
+		for (int i = pieces.size()-1; i >= 0; i--) {
+			if (!pieces.get(i).isComplete() && peer_has_piece[pieces.get(i).getIndex()]) {
+				return pieces.get(i);
 			}
 		}
 		return null;

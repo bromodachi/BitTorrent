@@ -75,10 +75,10 @@ public class RUBTClient {
 				activeTorrent));
 		thread.start();
 		System.out.print("downloading: " + getPercentComplete(pieces) + "%");
-		while (getPercentComplete(pieces) != 100) {
+/*		while (getPercentComplete(pieces) != 100) {
 			System.out.print("\rdownloading: " + getPercentComplete(pieces)
 					+ "%");
-		}
+		}*/
 		System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
 		System.out.println();
 		thread.join();
