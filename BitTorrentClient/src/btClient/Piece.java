@@ -173,7 +173,8 @@ public class Piece {
 	 * another thread. If such a block exists the lock on that block is acquired
 	 * before returning
 	 * 
-	 * @return the next {@link#Block} to be downloaded, null if no block is available
+	 * @return the next {@link#Block} to be downloaded, null if no block is
+	 *         available
 	 */
 	public Block getNextBlock() {
 		for (Block block : blocks) {
@@ -307,5 +308,21 @@ public class Piece {
 			block.setDownloaded(false);
 		}
 		complete = false;
+	}
+
+	/**
+	 * Reads an array of bytes form the file that this piece is written too
+	 * 
+	 * @param offset
+	 *            the offset in bytes of where to begin reading
+	 * @param size
+	 *            the number of bytes to read
+	 * @return an array of bytes read from the file
+	 * @throws IOException
+	 */
+	public byte[] getBytes(int offset, int size) throws IOException {
+		byte[] bytes = new byte[size];
+		file.read(bytes, offset + this.offset, size);
+		return bytes;
 	}
 }

@@ -301,13 +301,15 @@ public class Peer {
 		message.putInt(block_length);
 		outputStream.write(message.array());
 	}
+
 	/**
 	 * Sends a request message to the peer
-	 * @param block the {@link Block} to be requested
+	 * 
+	 * @param block
+	 *            the {@link Block} to be requested
 	 * @throws IOException
 	 */
-	public void sendRequest(Block block)
-			throws IOException {
+	public void sendRequest(Block block) throws IOException {
 		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
@@ -322,22 +324,24 @@ public class Peer {
 	/**
 	 * Sends a piece message to the peer
 	 * 
-	 * @param index
-	 *            zero based index of the piece
+	 * @param piece
+	 *            the {@link Piece} being sent to the peer
 	 * @param offset
-	 *            block offset of the piece
+	 *            the block offset to send to the peer
+	 * @param size
+	 *            the size of the block to send to the peer
 	 * @throws IOException
 	 */
-	public void sendPiece(int index, int offset) throws IOException {
+	public void sendPiece(Piece piece, int offset, int size) throws IOException {
 		int payloadLength = 0; // need to figure out code for adding payload
 		byte[] bytes = new byte[BtUtils.PIECE_LENGTH_PREFIX
 				+ BtUtils.PREFIX_LENGTH + payloadLength];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.PIECE_LENGTH_PREFIX);
 		message.put((BtUtils.PIECE_ID));
-		message.putInt(index);
+		message.putInt(piece.getIndex());
 		message.putInt(offset);
-		// add payload
+		message.put(piece.getBytes(offset, size));
 		outputStream.write(message.array());
 		outputStream.flush();
 	}
