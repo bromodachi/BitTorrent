@@ -39,6 +39,17 @@ public class Peer {
 		choked = true;
 	}
 
+	@Override
+	public boolean equals(Object object) {
+		if (object.getClass() == this.getClass()) {
+			if (((Peer) object).getPeer_id() == this.getPeer_id()
+					&& ((Peer) object).getIP().equals(this.getIP())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/* ================= Getters =================== */
 	public int getInterval() {
 		return interval;

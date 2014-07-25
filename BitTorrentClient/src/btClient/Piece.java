@@ -111,6 +111,16 @@ public class Piece {
 
 	}
 
+	@Override
+	public boolean equals(Object object) {
+		if (object.getClass() == Piece.class) {
+			return (((Piece) object).getIndex() == this.index
+					&& ((Piece) object).getSize() == this.size && ((Piece) object)
+						.getOffset() == this.offset);
+		}
+		return false;
+	}
+
 	/* ============== Getters ================== */
 	/**
 	 * Checks whether the piece is completely downloaded

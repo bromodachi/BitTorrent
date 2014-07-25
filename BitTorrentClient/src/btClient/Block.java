@@ -61,6 +61,19 @@ public class Block {
 		downloaded = false;
 	}
 
+	@Override
+	public boolean equals(Object object) {
+		if (object.getClass() == this.getClass()) {
+			if (((Block) object).getPieceIndex() == this.piece_index
+					&& ((Block) object).getIndex() == this.index
+					&& ((Block) object).getSize() == this.size) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/* =============== GETTERS ==================== */
 	/**
 	 * @return the zero based index of the piece that this block belongs too
 	 */
@@ -99,33 +112,6 @@ public class Block {
 	}
 
 	/**
-	 * Sets the value of downloaded to true
-	 */
-	public void setDownloaded() {
-		downloaded = true;
-	}
-
-	public void setDownloaded(boolean downloaded) {
-		this.downloaded = downloaded;
-	}
-
-	/**
-	 * 
-	 * @return {@link#lastBlock}
-	 */
-	public boolean isLastBlock() {
-		return lastBlock;
-	}
-
-	/**
-	 * 
-	 * @see java.util.concurrent.locks.ReentrantLock#tryLock()
-	 */
-	public boolean tryLock() {
-		return lock.tryLock();
-	}
-
-	/**
 	 * 
 	 * @see java.util.concurrent.locks.ReentrantLock#isLocked()
 	 */
@@ -139,6 +125,34 @@ public class Block {
 	 */
 	public boolean isHoldingLock() {
 		return lock.isHeldByCurrentThread();
+	}
+
+	/**
+	 * 
+	 * @return {@link#lastBlock}
+	 */
+	public boolean isLastBlock() {
+		return lastBlock;
+	}
+
+	/* ============= SETTERS ================= */
+	/**
+	 * Sets the value of downloaded to true
+	 */
+	public void setDownloaded() {
+		downloaded = true;
+	}
+
+	public void setDownloaded(boolean downloaded) {
+		this.downloaded = downloaded;
+	}
+
+	/**
+	 * 
+	 * @see java.util.concurrent.locks.ReentrantLock#tryLock()
+	 */
+	public boolean tryLock() {
+		return lock.tryLock();
 	}
 
 	/**
