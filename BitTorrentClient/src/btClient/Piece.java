@@ -102,10 +102,10 @@ public class Piece {
 		for (int i = 0; i < numBlocks; i++) {
 			if (i == (numBlocks - 1)) {
 				blocks.add(new Block(index, i, i * BtUtils.BLOCK_SIZE,
-						last_block_size));
+						last_block_size, true));
 			} else {
 				blocks.add(new Block(index, i, i * BtUtils.BLOCK_SIZE,
-						BtUtils.BLOCK_SIZE));
+						BtUtils.BLOCK_SIZE, false));
 			}
 		}
 
@@ -168,10 +168,16 @@ public class Piece {
 		return downloadAttempts;
 	}
 
-
+	/**
+	 * Gets the next block that has not yet been downloaded and is not locked by
+	 * another thread. If such a block exists the lock on that block is acquired
+	 * before returning
+	 * 
+	 * @return the next {@link#Block} to be downloaded, null if no block is available
+	 */
 	public Block getNextBlock() {
 		for (Block block : blocks) {
-			if(!block.isDownloaded() && block.tryLock()){
+			if (!block.isDownloaded() && block.tryLock()) {
 				return block;
 			}
 		}
@@ -262,27 +268,22 @@ public class Piece {
 					"block offset does not reslove to a valid block index");
 		}
 		int block_index = block_offset / BtUtils.BLOCK_SIZE;
+		Block block = blocks.get(block_index);
 		byte[] payload = new byte[parser.remaining()];
 		parser.get(payload, 0, payload.length);
 		// Check if block is last block in piece
-		if (block_index == numBlocks - 1) {
-			if (payload.length > BtUtils.BLOCK_SIZE) {
-				throw new BtException(
-						"Last block in piece is longer than block size");
-			}
-		} else if (payload.length != BtUtils.BLOCK_SIZE) {
-			throw new BtException("Incorrect block size " + payload.length);
+		if (payload.length != block.getSize()) {
+			throw new BtException("payload does not match block size");
 		}
 		// write payload to file
 		FileChannel output = file.getChannel();
 		output.write(ByteBuffer.wrap(payload), (this.offset + block_offset));
 		// update boolean values
-		blocks.get(block_index).setDownloaded();
+		block.setDownloaded();
 		setComplete();
 		// create hash if complete
 		if (complete) {
 			setHash(computeHash());
-
 		}
 	}
 

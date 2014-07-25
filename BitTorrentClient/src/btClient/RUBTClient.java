@@ -74,11 +74,11 @@ public class RUBTClient {
 				activeTorrent.info_hash, communicationTracker.getClientID(),
 				activeTorrent));
 		thread.start();
-		System.out.print("downloading: " + getPercentComplete(pieces) + "%");
-/*		while (getPercentComplete(pieces) != 100) {
+		while (getPercentComplete(pieces) != 100) {
 			System.out.print("\rdownloading: " + getPercentComplete(pieces)
 					+ "%");
-		}*/
+			Thread.sleep(1000);
+		}
 		System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
 		System.out.println();
 		thread.join();

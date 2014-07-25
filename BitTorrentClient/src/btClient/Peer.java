@@ -301,6 +301,23 @@ public class Peer {
 		message.putInt(block_length);
 		outputStream.write(message.array());
 	}
+	/**
+	 * Sends a request message to the peer
+	 * @param block the {@link Block} to be requested
+	 * @throws IOException
+	 */
+	public void sendRequest(Block block)
+			throws IOException {
+		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
+				+ BtUtils.PREFIX_LENGTH];
+		ByteBuffer message = ByteBuffer.wrap(bytes);
+		message.putInt(BtUtils.REQUEST_LENGTH_PREFIX);
+		message.put((BtUtils.REQUEST_ID));
+		message.putInt(block.getPieceIndex());
+		message.putInt(block.getOffset());
+		message.putInt(block.getSize());
+		outputStream.write(message.array());
+	}
 
 	/**
 	 * Sends a piece message to the peer
