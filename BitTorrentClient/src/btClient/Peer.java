@@ -23,20 +23,37 @@ import java.nio.ByteBuffer;
  * 
  */
 public class Peer {
-	private int interval, complete, incomplete, port;
+	private int interval, port;
 	private String IP, peer_id;
 	private Socket connection;
 	private DataInputStream inputStream;
 	private DataOutputStream outputStream;
+	/**
+	 * The number of bytes that this peer has downloaded from the client
+	 */
+	private int downloaded;
+	/**
+	 * The number of bytes this peer has uploaded to the client
+	 */
+	private int uploaded;
+	/**
+	 * boolean array indicating whether or not this peer has each piece
+	 */
+	private boolean[] has_piece = null;
+	/**
+	 * indicates whether or not this piece is choked
+	 */
 	private boolean choked;
-	private boolean exchangeMess = false;
 
 	public Peer(String IP, String peer_id, int port) {
 		this.IP = IP;
 		this.peer_id = peer_id;
 		this.port = port;
 		this.connection = null;
+		uploaded = 0;
+		downloaded = 0;
 		choked = true;
+
 	}
 
 	@Override
@@ -53,14 +70,6 @@ public class Peer {
 	/* ================= Getters =================== */
 	public int getInterval() {
 		return interval;
-	}
-
-	public int getComplete() {
-		return complete;
-	}
-
-	public int getIncomplete() {
-		return incomplete;
 	}
 
 	public int getPort() {
@@ -91,6 +100,14 @@ public class Peer {
 		return outputStream;
 	}
 
+	public int getDownloaded() {
+		return downloaded;
+	}
+
+	public int getUploaded() {
+		return uploaded;
+	}
+
 	public boolean isChoked() {
 		return choked;
 	}
@@ -98,14 +115,6 @@ public class Peer {
 	/* =============== Setters ================ */
 	public void setInterval(int interval) {
 		this.interval = interval;
-	}
-
-	public void setComplete(int complete) {
-		this.complete = complete;
-	}
-
-	public void setIncomplete(int incomplete) {
-		this.incomplete = incomplete;
 	}
 
 	public void setPort(int port) {
@@ -124,17 +133,89 @@ public class Peer {
 		this.choked = choked;
 	}
 
-	public boolean getExchangeMessage() {
-		return this.exchangeMess;
+	public void setHasPieces(boolean[] has_piece) {
+		this.has_piece = has_piece;
 	}
 
+	public void setUploaded(int uploaded) {
+		this.uploaded = uploaded;
+	}
+
+	/**
+	 * Adds the given number of uploaded bytes to the uploaded counter
+	 * 
+	 * @param uploaded
+	 *            number of bytes uploaded
+	 */
+	public void uploaded(int uploaded) {
+		this.uploaded += uploaded;
+	}
+
+	public void setDownloaded(int downloaded) {
+		this.downloaded = downloaded;
+	}
+
+	/**
+	 * Adds the given number of bytes downloaded to the download counter
+	 * 
+	 * @param downloaded
+	 *            number of bytes downloaded
+	 */
+	public void downloaded(int downloaded) {
+		this.downloaded += downloaded;
+	}
+
+	/* =============== GETTERS ============== */
+	/**
+	 * Checks if a this peer has the piece indicated by the piece index
+	 * 
+	 * @param pieceIndex
+	 *            the zero based index of the piece to be checked
+	 * @return True if this peer has the indicated piece, False if peer does not
+	 *         have piece or if {@link#has_piece} has not yet been set
+	 */
+	public boolean has_piece(int pieceIndex) {
+		if (has_piece != null) {
+			return has_piece[pieceIndex];
+		}
+		return false;
+	}
+
+	/**
+	 * Sets {@link#has_piece} at the given index to be true, indicating that
+	 * this peer now has the piece with the given index
+	 * 
+	 * @param index
+	 *            the zero based index of the piece
+	 */
+	public void setPiece(int index) {
+		has_piece[index] = true;
+	}
+
+	/**
+	 * Sets the value of {@link#has_piece} to the given boolean value at the
+	 * given index
+	 * 
+	 * @param index
+	 *            zero based index
+	 * @param bool
+	 */
+	public void setPiece(int index, boolean bool) {
+		has_piece[index] = bool;
+	}
+
+	/* =============== Methods ==================== */
+	/**
+	 * Disconnects client from this peer and closes relevant streams
+	 * 
+	 * @throws IOException
+	 */
 	public void disconnect() throws IOException {
 		inputStream.close();
 		outputStream.close();
 		connection.close();
 	}
 
-	/* =============== Methods ==================== */
 	/**
 	 * Establishes a connection with the peer by creating a socket to the peer's
 	 * IP address and port number then creates a handshake message from the
@@ -394,5 +475,29 @@ public class Peer {
 			e.printStackTrace();
 		}
 
+	}
+	/**
+	 * Converts the bytes of a bitfield to a boolean array. If we get a 1 the
+	 * peer has the piece.
+	 * 
+	 * @param bitfield
+	 *            bitfield message received from the peer
+	 * @param numPieces
+	 *            number of pieces to the downloading file
+	 * @return boolean array of boolean values representing the peers possesion
+	 *         of the peice corresponding to the array's index
+	 */
+	public static boolean[] ConvertBitfieldToArray(byte[] bitfield, int numPieces) {
+		boolean[] bool = new boolean[numPieces];
+		for (int i = 0; i < bool.length; i++) {
+			// from the java docs of a bitset : ((bb.get(bb.position()+n/8) &
+			// (1<<(n%8))) != 0)
+			// uses bit wise &:
+			if (((bitfield[i / 8] >> (7 - i % 8) & 1) == 1)) {
+				bool[i] = true;
+			}
+			// don't need else, default value is false.
+		}
+		return bool;
 	}
 }

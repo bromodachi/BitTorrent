@@ -89,31 +89,22 @@ public class MessageHandler implements Runnable {
 			}
 			while (!choked) {
 				piece = getNextPiece();
-				if (piece == null) {
-					// no more pieces
+				if (piece != null) {
+					// get the next block to download
+					Block block = piece.getNextBlock();
+					// should not happen
+					if (block == null) {
+						System.err.println("set null block");
+						continue;
+					}
+
 					try {
-						peer.disconnect();
+						peer.sendRequest(block);
 					} catch (IOException e) {
-						System.err
-								.println("An error has encountered. Exiting...");
+						System.err.println("An error has encountered. Exiting...");
+						piece.unlock();
 						return;
 					}
-					return;
-				}
-				// get the next block to download
-				Block block = piece.getNextBlock();
-				// should not happen
-				if (block == null) {
-					System.err.println("set null block");
-					continue;
-				}
-
-				try {
-					peer.sendRequest(block);
-				} catch (IOException e) {
-					System.err.println("An error has encountered. Exiting...");
-					piece.unlock();
-					return;
 				}
 				
 					try {
@@ -195,6 +186,7 @@ public class MessageHandler implements Runnable {
 				System.err.println("Received unexpected piece");
 			}
 			piece.writeBlock(message);
+			peer.downloaded(message.length - (BtUtils.PIECE_HEADER_SIZE + BtUtils.PREFIX_LENGTH));
 			/*
 			 * System.out.println("wrote Piece:" + currBlock.getPieceIndex() +
 			 * " block:" + currBlock.getIndex());
@@ -239,35 +231,6 @@ public class MessageHandler implements Runnable {
 		// remove message id from message
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[message.length - 1]);
 		bytes.put(message, 1, message.length - 1);
-		boolean[] bitSet = ConvertBitfieldToArray(bytes.array(), pieces.size());
-		for (int i = 0; i < peer_has_piece.length; i++) {
-
-			peer_has_piece[i] = bitSet[i];
-		}
-	}
-
-	/**
-	 * Converts the bytes of a bitfield to a boolean array. If we get a 1 the
-	 * peer has the piece.
-	 * 
-	 * @param bitfield
-	 *            bitfield message received from the peer
-	 * @param numPieces
-	 *            number of pieces to the downloading file
-	 * @return boolean array of boolean values representing the peers possesion
-	 *         of the peice corresponding to the array's index
-	 */
-	public boolean[] ConvertBitfieldToArray(byte[] bitfield, int numPieces) {
-		boolean[] bool = new boolean[numPieces];
-		for (int i = 0; i < bool.length; i++) {
-			// from the java docs of a bitset : ((bb.get(bb.position()+n/8) &
-			// (1<<(n%8))) != 0)
-			// uses bit wise &:
-			if (((bitfield[i / 8] >> (7 - i % 8) & 1) == 1)) {
-				bool[i] = true;
-			}
-			// don't need else, default value is false.
-		}
-		return bool;
+		peer.setHasPieces(Peer.ConvertBitfieldToArray(bytes.array(), pieces.size()));
 	}
 }
