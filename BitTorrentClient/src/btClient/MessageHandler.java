@@ -58,7 +58,7 @@ public class MessageHandler implements Runnable {
 		choked = true;
 		this.torrent = torr;
 	}
-
+	//blah
 	@Override
 	public void run() {
 		if (peer == null) {
