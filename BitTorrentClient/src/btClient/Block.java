@@ -1,6 +1,5 @@
 package btClient;
 
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * An object representing a single block within a {@link Piece}; This class
@@ -29,10 +28,6 @@ public class Block {
 	 */
 	private final int size;
 	/**
-	 * The lock for the use of this block
-	 */
-	private final ReentrantLock lock;
-	/**
 	 * Boolean value indicating whether this block as already been downloaded
 	 * and saved to the disk
 	 */
@@ -56,7 +51,6 @@ public class Block {
 		this.index = index;
 		this.offset = offset;
 		this.size = size;
-		this.lock = new ReentrantLock(false);
 		this.lastBlock = lastBlock;
 		downloaded = false;
 	}
@@ -113,22 +107,6 @@ public class Block {
 
 	/**
 	 * 
-	 * @see java.util.concurrent.locks.ReentrantLock#isLocked()
-	 */
-	public boolean isLocked() {
-		return lock.isLocked();
-	}
-
-	/**
-	 * 
-	 * @see java.util.concurrent.locks.ReentrantLock#isHeldByCurrentThread()
-	 */
-	public boolean isHoldingLock() {
-		return lock.isHeldByCurrentThread();
-	}
-
-	/**
-	 * 
 	 * @return {@link#lastBlock}
 	 */
 	public boolean isLastBlock() {
@@ -145,21 +123,6 @@ public class Block {
 
 	public void setDownloaded(boolean downloaded) {
 		this.downloaded = downloaded;
-	}
-
-	/**
-	 * 
-	 * @see java.util.concurrent.locks.ReentrantLock#tryLock()
-	 */
-	public boolean tryLock() {
-		return lock.tryLock();
-	}
-
-	/**
-	 * @see java.util.concurrent.locks.ReentrantLock#unlock()
-	 */
-	public void unlock() {
-		lock.unlock();
 	}
 
 }

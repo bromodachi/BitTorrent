@@ -17,6 +17,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * This class is tasked with managing a single piece of the downloaded file.
@@ -49,6 +50,10 @@ public class Piece {
 	 * The file where the downloaded data is to be saved
 	 */
 	private final RandomAccessFile file;
+	/**
+	 * Lock for this piece
+	 */
+	private final ReentrantLock lock;
 	/**
 	 * An array list of {@link Block} objects associated with this piece
 	 */
@@ -108,6 +113,8 @@ public class Piece {
 						BtUtils.BLOCK_SIZE, false));
 			}
 		}
+
+		lock = new ReentrantLock();
 
 	}
 
@@ -188,7 +195,7 @@ public class Piece {
 	 */
 	public Block getNextBlock() {
 		for (Block block : blocks) {
-			if (!block.isDownloaded() && block.tryLock()) {
+			if (!block.isDownloaded()) {
 				return block;
 			}
 		}
@@ -221,6 +228,20 @@ public class Piece {
 	}
 
 	/* =========== METHODS ========= */
+	/**
+	 * @see ReentrantLock#tryLock()
+	 * @return True if lock is acquired otherwise false
+	 */
+	public boolean tryLock() {
+		return lock.tryLock();
+	}
+	/**
+	 * @see ReentrantLock#unlock()
+	 */
+	public void unlock(){
+		lock.unlock();
+	}
+
 	/**
 	 * Computes SHA-1 hash for this piece
 	 * 

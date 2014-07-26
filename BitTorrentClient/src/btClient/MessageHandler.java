@@ -20,7 +20,7 @@ import java.util.ArrayList;
  * 
  */
 public class MessageHandler implements Runnable {
-	
+
 	private ArrayList<Piece> pieces;
 	private final Peer peer;
 	private final ByteBuffer info_hash;
@@ -28,7 +28,7 @@ public class MessageHandler implements Runnable {
 	private boolean[] peer_has_piece;
 	private boolean choked;
 	private TorrentInfo torrent;
-	private Block currBlock = null;
+	private Piece piece = null;
 
 	/**
 	 * Returns a new message handler object, created with the given parameters
@@ -58,7 +58,8 @@ public class MessageHandler implements Runnable {
 		choked = true;
 		this.torrent = torr;
 	}
-	//blah
+
+	// blah
 	@Override
 	public void run() {
 		if (peer == null) {
@@ -87,54 +88,53 @@ public class MessageHandler implements Runnable {
 				}
 			}
 			while (!choked) {
-				if (currBlock == null) {
-					Piece piece = getNextPiece();
-					if (piece == null) {
-						// no more pieces
-						try {
-							peer.disconnect();
-						} catch (IOException e) {
-							System.err
-									.println("An error has encountered. Exiting...");
-							if(currBlock != null){
-								currBlock.unlock();
-							}
-							return;
-						}
-						if(currBlock != null){
-							currBlock.unlock();
+				piece = getNextPiece();
+				if (piece == null) {
+					// no more pieces
+					try {
+						peer.disconnect();
+					} catch (IOException e) {
+						System.err
+								.println("An error has encountered. Exiting...");
+						return;
+					}
+					return;
+				}
+				// get the next block to download
+				Block block = piece.getNextBlock();
+				// should not happen
+				if (block == null) {
+					System.err.println("set null block");
+					continue;
+				}
+
+				try {
+					peer.sendRequest(block);
+				} catch (IOException e) {
+					System.err.println("An error has encountered. Exiting...");
+					piece.unlock();
+					return;
+				}
+				
+					try {
+						handleMessage(peer.getMessage());
+					} catch (IOException | BtException e) {
+						System.err.println("Fatal error.... disconnecting");
+						if (piece != null) {
+							piece.unlock();
 						}
 						return;
 					}
-					// get the next block to download
-					currBlock = piece.getNextBlock();
-					// if getNextBlock() returns null then all blocks for the current piece are either completed or locked
-					if (currBlock == null) {
-						continue; 
-					}
-				}
-
-				try {
-					peer.sendRequest(currBlock);
-				} catch (IOException e) {
-					System.err.println("An error has encountered. Exiting...");
-
-					return;
-				}
-				try {
-					handleMessage(peer.getMessage());
-				} catch (IOException e) {
-					System.err.println("An error has encountered. Exiting...");
-					return;
-				} catch (BtException e) {
-					System.err.println("An error has encountered. Exiting...");
-					return;
-				}
+				
 
 			}
-			peer.closeEverything();
+			if (piece != null) {
+				piece.unlock();
+				piece = null;
+			}
 			return;
 		}
+		peer.closeEverything();
 	}
 
 	/**
@@ -145,7 +145,10 @@ public class MessageHandler implements Runnable {
 	private Piece getNextPiece() {
 		for (Piece piece : pieces) {
 			if (!piece.isComplete() && peer_has_piece[piece.getIndex()]) {
-				return piece;
+				// attempt to acquire lock on piece
+				if (piece.tryLock()) {
+					return piece;
+				}
 			}
 		}
 		return null;
@@ -163,9 +166,8 @@ public class MessageHandler implements Runnable {
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
 			choked = true;
-			if (currBlock != null) {
-				currBlock.unlock();
-				currBlock = null;
+			if (piece != null) {
+				piece.unlock();
 			}
 			break;
 		case BtUtils.UNCHOKE_ID:
@@ -188,29 +190,15 @@ public class MessageHandler implements Runnable {
 		case BtUtils.REQUEST_ID:
 			break;
 		case BtUtils.PIECE_ID:
-			if (currBlock == null) {
-				System.err.println("Received unexpected block");
-				return;
-			}
 			ByteBuffer parser = ByteBuffer.wrap(message, 1, message.length - 1);
-			Piece piece = pieces.get(parser.getInt());
-			// Check block offset, size, and piece index to ensure correct block
-			// was received
-			parser.get();
-			/*
-			 * if ((currBlock.getOffset() != parser.getInt()) ||
-			 * (piece.getIndex() != currBlock.getPieceIndex())) {
-			 * System.err.println("received invalid block:");
-			 * System.err.println("Requested: Piece: " +
-			 * currBlock.getPieceIndex() + " offset: " + currBlock.getOffset() +
-			 * " size: " + currBlock.getSize());
-			 * System.err.println("Received: Piece:" + parser.getInt(1) +
-			 * " offset: " + parser.getInt(5) + " size: " + parser.remaining());
-			 * return; }
-			 */
+			if (piece.getIndex() != parser.getInt()) {
+				System.err.println("Received unexpected piece");
+			}
 			piece.writeBlock(message);
-			/*System.out.println("wrote Piece:" + currBlock.getPieceIndex()
-					+ " block:" + currBlock.getIndex());*/
+			/*
+			 * System.out.println("wrote Piece:" + currBlock.getPieceIndex() +
+			 * " block:" + currBlock.getIndex());
+			 */
 			if (piece.isComplete()) {
 				// check that piece has downloaded correctly (check for correct
 				// hash)
@@ -230,9 +218,10 @@ public class MessageHandler implements Runnable {
 				} else {
 					peer.sendHave(piece.getIndex());
 				}
+				piece.unlock();
+				piece = null;
 			}
-			currBlock.unlock();
-			currBlock = null;
+
 			break;
 
 		default:
