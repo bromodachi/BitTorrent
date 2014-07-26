@@ -20,7 +20,7 @@ import java.util.ArrayList;
  * 
  */
 public class MessageHandler implements Runnable {
-
+	
 	private ArrayList<Piece> pieces;
 	private final Peer peer;
 	private final ByteBuffer info_hash;
@@ -59,9 +59,6 @@ public class MessageHandler implements Runnable {
 		this.torrent = torr;
 	}
 
-	/**
-	 * 
-	 */
 	@Override
 	public void run() {
 		if (peer == null) {
@@ -99,14 +96,21 @@ public class MessageHandler implements Runnable {
 						} catch (IOException e) {
 							System.err
 									.println("An error has encountered. Exiting...");
+							if(currBlock != null){
+								currBlock.unlock();
+							}
 							return;
+						}
+						if(currBlock != null){
+							currBlock.unlock();
 						}
 						return;
 					}
 					// get the next block to download
 					currBlock = piece.getNextBlock();
+					// if getNextBlock() returns null then all blocks for the current piece are either completed or locked
 					if (currBlock == null) {
-						continue;
+						continue; 
 					}
 				}
 
