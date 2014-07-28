@@ -72,6 +72,8 @@ public class Piece {
 	 */
 	private int downloadAttempts;
 
+	private int peerCount;
+
 	/**
 	 * Creates a new piece object with the given parameters
 	 * 
@@ -113,6 +115,8 @@ public class Piece {
 						BtUtils.BLOCK_SIZE, false));
 			}
 		}
+
+		peerCount = 0;
 
 		lock = new ReentrantLock();
 
@@ -202,6 +206,15 @@ public class Piece {
 		return null;
 	}
 
+	/**
+	 * Gets the number of peers that currently have this piece
+	 * 
+	 * @return {@link#peerCount}
+	 */
+	public int getPeerCount() {
+		return peerCount;
+	}
+
 	/* ======================= SETTERS ======================= */
 	/**
 	 * Sets the complete value by checking if all blocks are downloaded
@@ -221,10 +234,27 @@ public class Piece {
 	}
 
 	/**
-	 * Increases the number of download attempts made by 1
+	 * Increases the number of download attempts made by one; This method is
+	 * synchronized for thread saftey
 	 */
-	public void incrementAttempts() {
+	public synchronized void incrementAttempts() {
 		downloadAttempts++;
+	}
+
+	/**
+	 * Increments the {@link#peerCount} for this piece by one; This method is
+	 * synchronized for thread safety
+	 */
+	public synchronized void incrementPeerCount() {
+		peerCount++;
+	}
+
+	/**
+	 * Decrements {@link#peerCount} for this piece by one; This method is
+	 * synchronized for thread safety
+	 */
+	public synchronized void decrementPeerCount() {
+		peerCount--;
 	}
 
 	/* =========== METHODS ========= */
@@ -235,10 +265,11 @@ public class Piece {
 	public boolean tryLock() {
 		return lock.tryLock();
 	}
+
 	/**
 	 * @see ReentrantLock#unlock()
 	 */
-	public void unlock(){
+	public void unlock() {
 		lock.unlock();
 	}
 

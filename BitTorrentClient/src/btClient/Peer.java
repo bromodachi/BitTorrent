@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 /**
  * This class is tasked with managing the connection with a peer and sending
@@ -188,7 +189,7 @@ public class Peer {
 	 * @param index
 	 *            the zero based index of the piece
 	 */
-	public void setPiece(int index) {
+	public void setHasPiece(int index) {
 		has_piece[index] = true;
 	}
 
@@ -200,7 +201,7 @@ public class Peer {
 	 *            zero based index
 	 * @param bool
 	 */
-	public void setPiece(int index, boolean bool) {
+	public void setHasPiece(int index, boolean bool) {
 		has_piece[index] = bool;
 	}
 
@@ -476,6 +477,7 @@ public class Peer {
 		}
 
 	}
+
 	/**
 	 * Converts the bytes of a bitfield to a boolean array. If we get a 1 the
 	 * peer has the piece.
@@ -487,7 +489,8 @@ public class Peer {
 	 * @return boolean array of boolean values representing the peers possesion
 	 *         of the peice corresponding to the array's index
 	 */
-	public static boolean[] ConvertBitfieldToArray(byte[] bitfield, int numPieces) {
+	public static boolean[] ConvertBitfieldToArray(byte[] bitfield,
+			int numPieces) {
 		boolean[] bool = new boolean[numPieces];
 		for (int i = 0; i < bool.length; i++) {
 			// from the java docs of a bitset : ((bb.get(bb.position()+n/8) &
@@ -499,5 +502,35 @@ public class Peer {
 			// don't need else, default value is false.
 		}
 		return bool;
+	}
+
+	/**
+	 * Increments the peerCount for each {@link Piece} in the list of pieces by
+	 * calling {@link Piece#incrementPeerCount()}
+	 * 
+	 * @param pieces
+	 *            An array list of {@link Piece} objects
+	 */
+	public void incrementPeerCounters(ArrayList<Piece> pieces) {
+		for (Piece piece : pieces) {
+			if (has_piece[piece.getIndex()]) {
+				piece.incrementPeerCount();
+			}
+		}
+	}
+
+	/**
+	 * Decrements the peerCount for each {@link Piece} by calling
+	 * {@link Piece#decrementPeerCount()}
+	 * 
+	 * @param pieces
+	 *            An array list of {@link Piece} objects
+	 */
+	public void decrementPeerCounters(ArrayList<Piece> pieces) {
+		for (Piece piece : pieces) {
+			if (has_piece[piece.getIndex()]) {
+				piece.decrementPeerCount();
+			}
+		}
 	}
 }

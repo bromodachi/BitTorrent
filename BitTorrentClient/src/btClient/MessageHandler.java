@@ -20,30 +20,53 @@ import java.util.ArrayList;
  * 
  */
 public class MessageHandler implements Runnable {
-
+	/**
+	 * An array list of {@link Piece} objects that make up the file to be
+	 * downloaded
+	 */
 	private ArrayList<Piece> pieces;
+	/**
+	 * The {@link Peer} that this MessageHandler is responsible for handling
+	 */
 	private final Peer peer;
+	/**
+	 * The {@link TorrentInfo#info_hash} for the current torrent file
+	 */
 	private final ByteBuffer info_hash;
+	/**
+	 * The local peer_ID for this client
+	 */
 	private final ByteBuffer clientID;
-	private boolean[] peer_has_piece;
+	/**
+	 * Indicates whether or not the client is choked by the {@link Peer} that
+	 * this MessageHandler is responsible for
+	 */
 	private boolean choked;
+	/**
+	 * All general info relating to this torrent
+	 * 
+	 * @see TorrentInfo
+	 */
 	private TorrentInfo torrent;
+	/**
+	 * The current {@link Piece} that this MessageHandler is downloading from
+	 * the peer
+	 */
 	private Piece piece = null;
+	/**
+	 * The number of downloaded bytes that this MessageHandler has discarded due
+	 * to errors or other issues
+	 */
+	private int wasted;
 
 	/**
 	 * Returns a new message handler object, created with the given parameters
 	 * 
-	 * @param pieces
-	 *            ArrayList of pieces to be downloaded for the file
-	 * @param peer
-	 *            The peer for which this MessageHandler is responsible for
-	 *            communicating with
-	 * @param info_hash
-	 *            The info_hash given in the torrent file
-	 * @param clientID
-	 *            The local peer_id
-	 * @param torr
-	 *            The relevent TorrentInfo object for this download
+	 * @param {@link#pieces}
+	 * @param {@link#peer}
+	 * @param {@link#info_hash}
+	 * @param {@link#clientID}
+	 * @param {@link#torr}
 	 */
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
 			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
@@ -51,10 +74,6 @@ public class MessageHandler implements Runnable {
 		this.peer = peer;
 		this.info_hash = info_hash;
 		this.clientID = clientID;
-		this.peer_has_piece = new boolean[pieces.size()];
-		for (int i = 0; i < peer_has_piece.length; i++) {
-			peer_has_piece[i] = false;
-		}
 		choked = true;
 		this.torrent = torr;
 	}
@@ -84,6 +103,7 @@ public class MessageHandler implements Runnable {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
 					System.err.println("An error has encountered. Exiting...");
+					peer.decrementPeerCounters(pieces);
 					return;
 				}
 			}
@@ -101,31 +121,35 @@ public class MessageHandler implements Runnable {
 					try {
 						peer.sendRequest(block);
 					} catch (IOException e) {
-						System.err.println("An error has encountered. Exiting...");
+						System.err
+								.println("An error has encountered. Exiting...");
 						piece.unlock();
+						peer.decrementPeerCounters(pieces);
 						return;
 					}
 				}
-				
-					try {
-						handleMessage(peer.getMessage());
-					} catch (IOException | BtException e) {
-						System.err.println("Fatal error.... disconnecting");
-						if (piece != null) {
-							piece.unlock();
-						}
-						return;
+
+				try {
+					handleMessage(peer.getMessage());
+				} catch (IOException | BtException e) {
+					System.err.println("Fatal error.... disconnecting");
+					if (piece != null) {
+						piece.unlock();
 					}
-				
+					peer.decrementPeerCounters(pieces);
+					return;
+				}
 
 			}
 			if (piece != null) {
 				piece.unlock();
 				piece = null;
 			}
+			peer.decrementPeerCounters(pieces);
 			return;
 		}
 		peer.closeEverything();
+		peer.decrementPeerCounters(pieces);
 	}
 
 	/**
@@ -135,7 +159,7 @@ public class MessageHandler implements Runnable {
 	 */
 	private Piece getNextPiece() {
 		for (Piece piece : pieces) {
-			if (!piece.isComplete() && peer_has_piece[piece.getIndex()]) {
+			if (!piece.isComplete() && peer.has_piece(piece.getIndex())) {
 				// attempt to acquire lock on piece
 				if (piece.tryLock()) {
 					return piece;
@@ -154,6 +178,7 @@ public class MessageHandler implements Runnable {
 	 * @throws BtException
 	 */
 	private void handleMessage(byte[] message) throws IOException, BtException {
+		ByteBuffer parser;
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
 			choked = true;
@@ -169,6 +194,15 @@ public class MessageHandler implements Runnable {
 		case BtUtils.UNINTERESTED_ID:
 			break;
 		case BtUtils.HAVE_ID:
+			parser = ByteBuffer.wrap(message);
+			int index = parser.getInt(1);
+			if (index >= 0 && index < pieces.size()) {
+				peer.setHasPiece(index);
+			} else {
+				System.err
+						.println("Received have message with invalid piece index");
+				wasted += message.length;
+			}
 			break;
 		case BtUtils.BITFIELD_ID:
 			bitField(message);
@@ -181,12 +215,20 @@ public class MessageHandler implements Runnable {
 		case BtUtils.REQUEST_ID:
 			break;
 		case BtUtils.PIECE_ID:
-			ByteBuffer parser = ByteBuffer.wrap(message, 1, message.length - 1);
+			if(piece == null){
+				System.err.println("ERROR: Received unexpected piece message");
+				wasted += message.length;
+				return;
+			}
+			parser = ByteBuffer.wrap(message, 1, message.length - 1);
 			if (piece.getIndex() != parser.getInt()) {
-				System.err.println("Received unexpected piece");
+				System.err.println("ERROR: Received non-requested piece");
+				wasted += message.length;
+				return;
 			}
 			piece.writeBlock(message);
-			peer.downloaded(message.length - (BtUtils.PIECE_HEADER_SIZE + BtUtils.PREFIX_LENGTH));
+			peer.downloaded(message.length
+					- (BtUtils.PIECE_HEADER_SIZE + BtUtils.PREFIX_LENGTH));
 			/*
 			 * System.out.println("wrote Piece:" + currBlock.getPieceIndex() +
 			 * " block:" + currBlock.getIndex());
@@ -218,6 +260,7 @@ public class MessageHandler implements Runnable {
 
 		default:
 			System.err.println("ERROR: received invalid message from peer");
+			wasted += message.length;
 		}
 	}
 
@@ -231,6 +274,8 @@ public class MessageHandler implements Runnable {
 		// remove message id from message
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[message.length - 1]);
 		bytes.put(message, 1, message.length - 1);
-		peer.setHasPieces(Peer.ConvertBitfieldToArray(bytes.array(), pieces.size()));
+		peer.setHasPieces(Peer.ConvertBitfieldToArray(bytes.array(),
+				pieces.size()));
+		peer.incrementPeerCounters(pieces);
 	}
 }
