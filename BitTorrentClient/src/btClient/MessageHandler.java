@@ -104,6 +104,7 @@ public class MessageHandler implements Runnable {
 				System.out.println("choked " + Thread.currentThread().getId());
 				if(checkCompleteness()){
 					try {
+						System.out.println("disconnecting " + "Thread ID " + Thread.currentThread().getId() + Thread.currentThread().getName());
 						peer.disconnect();
 					} catch (IOException e) {
 						
@@ -159,7 +160,11 @@ public class MessageHandler implements Runnable {
 					System.err.println("Fatal error.... disconnecting");
 					break mainLoop;
 				}
-
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
 			// If we become choked unlock piece so other threads can have a
 			// chance to lock it

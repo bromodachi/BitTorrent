@@ -241,6 +241,7 @@ public class Peer {
 		info_hash.rewind();
 		clientID.rewind();
 		while (info_hash.position() < info_hash.capacity()) {
+			System.out.println("info_hash " + info_hash.array());
 			handshake.put(info_hash.get());
 		}
 		while (clientID.position() < clientID.capacity()) {
