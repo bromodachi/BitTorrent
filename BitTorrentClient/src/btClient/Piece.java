@@ -88,11 +88,12 @@ public class Piece {
 	 *            the file to which this piece is to be saved
 	 * @throws FileNotFoundException
 	 */
-	public Piece(int index, int size, int offset, File file)
+	public Piece(int index, int size, int offset, File file, byte[] hash)
 			throws FileNotFoundException {
 		this.index = index;
 		this.size = size;
 		this.offset = offset;
+		this.hash = hash;
 		this.file = new RandomAccessFile(file, "rw");
 		complete = false;
 		// find total number of blocks in piece
@@ -119,7 +120,12 @@ public class Piece {
 		peerCount = 0;
 
 		lock = new ReentrantLock();
-
+		// Check if piece is already completed in file
+		if (file.length() >= (offset + size)) {
+			if (checkHash()) {
+				setComplete();
+			}
+		}
 	}
 
 	@Override
@@ -217,9 +223,19 @@ public class Piece {
 
 	/* ======================= SETTERS ======================= */
 	/**
-	 * Sets the complete value by checking if all blocks are downloaded
+	 * Sets all blocks to downloaded and sets completed to true
 	 */
 	public void setComplete() {
+		for (Block block : blocks) {
+			block.setDownloaded();
+		}
+		complete = true;
+	}
+
+	/**
+	 * Sets the complete value by checking if all blocks are downloaded
+	 */
+	public void checkComplete() {
 		for (Block block : blocks) {
 			if (!block.isDownloaded()) {
 				complete = false;
@@ -279,12 +295,7 @@ public class Piece {
 	 * @return SHA-1 hash if piece is completed, otherwise returns null
 	 * @throws IOException
 	 */
-	private byte[] computeHash() throws IOException {
-		if (!complete) {
-			System.err
-					.println("Attempted to create hash for piece that is not complete");
-			return null;
-		}
+	public byte[] computeHash() throws IOException {
 		FileChannel input = file.getChannel();
 		ByteBuffer bytes = ByteBuffer.wrap(new byte[size]);
 		input.read(bytes, this.offset);
@@ -343,22 +354,37 @@ public class Piece {
 		output.write(ByteBuffer.wrap(payload), (this.offset + block_offset));
 		// update boolean values
 		block.setDownloaded();
-		setComplete();
+		checkComplete();
 		// create hash if complete
 		if (complete) {
 			setHash(computeHash());
 		}
 	}
 
+	public boolean checkHash() {
+		try {
+			return Arrays.equals(hash, computeHash());
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
 	/**
-	 * Checks if a given hash is equal to this piece's hash;
+	 * Checks if a given hash is equal to this piece's computed hash;
 	 * 
 	 * @param hash
 	 *            the SHA-1 hash that this piece is supposed to have
 	 * @return True if hashes match, otherwise false
+	 * @throws IOException
 	 */
 	public boolean checkHash(byte[] hash) {
-		return Arrays.equals(this.hash, hash);
+		try {
+			return Arrays.equals(computeHash(), hash);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 
 	/**

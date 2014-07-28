@@ -76,6 +76,7 @@ public class MessageHandler implements Runnable {
 		this.clientID = clientID;
 		choked = true;
 		this.torrent = torr;
+		wasted = 0;
 	}
 
 	// blah
@@ -127,6 +128,15 @@ public class MessageHandler implements Runnable {
 						peer.decrementPeerCounters(pieces);
 						return;
 					}
+				}else{
+					if(checkCompleteness()){
+						try {
+							peer.disconnect();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+					return;
 				}
 
 				try {
@@ -215,7 +225,7 @@ public class MessageHandler implements Runnable {
 		case BtUtils.REQUEST_ID:
 			break;
 		case BtUtils.PIECE_ID:
-			if(piece == null){
+			if (piece == null) {
 				System.err.println("ERROR: Received unexpected piece message");
 				wasted += message.length;
 				return;
@@ -277,5 +287,24 @@ public class MessageHandler implements Runnable {
 		peer.setHasPieces(Peer.ConvertBitfieldToArray(bytes.array(),
 				pieces.size()));
 		peer.incrementPeerCounters(pieces);
+	}
+	
+	private boolean checkCompleteness(){
+		for(Piece piece : pieces){
+			if(!piece.isComplete()){
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Goes to the bar and drinks heavily
+	 * 
+	 * @return The number of downloaded bytes that were discarded or ignored by
+	 *         this MessageHandler
+	 */
+	public int getWasted() {
+		return wasted;
 	}
 }

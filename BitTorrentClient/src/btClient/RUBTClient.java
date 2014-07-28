@@ -25,6 +25,7 @@ import java.util.ArrayList;
  */
 public class RUBTClient {
 	static File file = null;
+	static ArrayList<Peer> peers = null;
 
 	/**
 	 * This is the main method that is called upon program startup, this method
@@ -52,27 +53,37 @@ public class RUBTClient {
 		// Step 2 - Open the .torrent file and parse the data inside
 		byte[] torrentBytes = getFileBytes(args[0]);
 		TorrentInfo activeTorrent = new TorrentInfo(torrentBytes);
+		// Create Piece objects based on activeTorrent info and add them to
+		// pieces list
+		file = new File(args[1]);
+		if (!file.createNewFile()) {
+			if (!file.exists()) {
+				System.err.println("ERROR: Failed to create download file");
+				return;
+			}
+		}
 
 		// Step 3 - Send an HTTP GET request to the tracker
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
-		communicationTracker.CommunicateWithTracker("started");
-		// System.out.println(activeTorrent.toString());
-		// Any errors in the communication tracker, we shouldn't proceed.
-		if (communicationTracker.getError()) {
-			System.out.println("Exiting....");
-			file.delete();
+		try {
+			communicationTracker.CommunicateWithTracker("started");
+		} catch (BtException e) {
+			e.printStackTrace();
+			System.err.println("Failed to send started message");
 			return;
 		}
-
-		createPieces(pieces, activeTorrent);
-
+		// Any errors in the communication tracker, we shouldn't proceed.
+		if (createPieces(pieces, activeTorrent)) {
+			System.out.println("File is already complete");
+			return;
+		}
 		// Step 4 - Connect with the Peer.
 		// Create new message handler and give it its own thread to run in
+		peers = communicationTracker.getPeersList();
 		Thread thread = new Thread(new MessageHandler(pieces,
-				getTestPeer(communicationTracker.getPeersList()),
-				activeTorrent.info_hash, communicationTracker.getClientID(),
-				activeTorrent));
+				getTestPeer(peers), activeTorrent.info_hash,
+				communicationTracker.getClientID(), activeTorrent));
 		thread.start();
 		while (getPercentComplete(pieces) != 100) {
 			System.out.print("\rdownloading: " + getPercentComplete(pieces)
@@ -87,12 +98,16 @@ public class RUBTClient {
 			if (!curr.isComplete()) {
 				System.err
 						.println("Disconnected before downloading all pieces");
-				file.delete();
 				return;
 			}
 		}
-		communicationTracker.CommunicateWithTracker("completed");
-		communicationTracker.CommunicateWithTracker("stopped");
+		try {
+			communicationTracker.CommunicateWithTracker("completed");
+			communicationTracker.CommunicateWithTracker("stopped");
+		} catch (BtException e) {
+			e.printStackTrace();
+			System.err.println("Failed to send completed/stopped");
+		}
 		System.out.println("Download successful");
 
 	}// END MAIN
@@ -124,12 +139,6 @@ public class RUBTClient {
 			return false;
 		}
 		// check that a new file can be created with the second argument
-		file = new File(args[1]);
-		if (!file.createNewFile()) {
-			System.err
-					.println("Error: file either already exists or could not be created");
-			return false;
-		}
 		return true;
 	}// END validateArgs
 
@@ -190,22 +199,42 @@ public class RUBTClient {
 	 *            ArrayList of piece objects
 	 * @param activeTorrent
 	 *            TorrentInfo object for the active download
+	 * @return
 	 * @throws FileNotFoundException
 	 */
-	private static void createPieces(ArrayList<Piece> pieces,
+	private static boolean createPieces(ArrayList<Piece> pieces,
 			TorrentInfo activeTorrent) throws FileNotFoundException {
-		int numPieces = activeTorrent.file_length / activeTorrent.piece_length;
 		int leftover = activeTorrent.file_length % activeTorrent.piece_length;
 
-		for (int i = 0; i < numPieces; i++) {
-			pieces.add(new Piece(i, activeTorrent.piece_length, i
-					* activeTorrent.piece_length, file));
+		for (int i = 0; i < activeTorrent.piece_hashes.length; i++) {
+			if (i == (activeTorrent.piece_hashes.length - 1)) {
+				pieces.add(new Piece(i, leftover, i
+						* activeTorrent.piece_length, file,
+						activeTorrent.piece_hashes[i].array()));
+			} else {
+				pieces.add(new Piece(i, activeTorrent.piece_length, i
+						* activeTorrent.piece_length, file,
+						activeTorrent.piece_hashes[i].array()));
+			}
 		}
+		return checkCompleteness(pieces);
+	}
 
-		if (leftover != 0) {
-			pieces.add(new Piece(numPieces, leftover, numPieces
-					* activeTorrent.piece_length, file));
+	/**
+	 * Checks the completeness of the file by calling {@link Piece#isComplete()}
+	 * for each {@link Piece}
+	 * 
+	 * @param pieces
+	 *            ArrayList of pieces that make up the file
+	 * @return True if all pieces are complete, otherwise false
+	 */
+	public static boolean checkCompleteness(ArrayList<Piece> pieces) {
+		for (Piece piece : pieces) {
+			if (!piece.isComplete()) {
+				return false;
+			}
 		}
+		return true;
 	}
 
 	/**

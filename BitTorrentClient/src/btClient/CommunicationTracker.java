@@ -50,7 +50,6 @@ public class CommunicationTracker {
 	int complete;
 	int incomplete;
 	private int connectPort;
-	private boolean errors; // false if no errors.
 
 	/* ================= Constructor =================== */
 
@@ -87,10 +86,6 @@ public class CommunicationTracker {
 
 	public int incomplete() {
 		return incomplete;
-	}
-
-	public boolean getError() {
-		return errors;
 	}
 
 	/**
@@ -152,10 +147,11 @@ public class CommunicationTracker {
 	 * communicate with the tracker.
 	 * Once we get the tracker, it extracts all the information in order to start
 	 * exchanging messages like getting the list of peers.
+	 * @throws BtException 
 	 * 
 	 */
 	@SuppressWarnings("unchecked")
-	public void CommunicateWithTracker(String event) {
+	public void CommunicateWithTracker(String event) throws BtException {
 		if (event.equals("completed")) {
 			this.event = "completed";
 			this.downloaded = torrentInfo.file_length;
@@ -175,8 +171,7 @@ public class CommunicationTracker {
 		connectPort = getPort();
 		if (connectPort == -1) {
 			System.err.println("Couldn't connect to a port\nExiting...");
-			this.errors = true;
-			return;
+			throw new BtException("could not connect to a port");
 		}
 		/* making the string fullUrl */
 		String fullUrl = "";
@@ -191,20 +186,13 @@ public class CommunicationTracker {
 					+ this.downloaded + "&left=" + this.left + "&event="
 					+ this.event;
 		} catch (UnsupportedEncodingException e2) {
-			// TODO Auto-generated catch block
-			
-			errors = true;
-			return;
+			throw new BtException(e2.getMessage());
 		}
 	
 		try {
 			urlAddress = new URL(fullUrl);
 		} catch (MalformedURLException e1) {
-			// we should create
-			// TODO Auto-generated catch block
-		
-			errors = true;
-			return;
+			throw new BtException(e1.getMessage());
 		}
 		try {
 			/* http connection */
@@ -225,10 +213,8 @@ public class CommunicationTracker {
 				responseMap = (Map<ByteBuffer, Object>) Bencoder2
 						.decode(response);
 			} catch (BencodingException e) {
-				// TODO Auto-generated catch block
 				System.err.println("Bencoder couldn't get the map");
-				errors = true;
-				return;
+				throw new BtException(e.getMessage());
 			}
 			if (responseMap.containsKey(ByteBuffer
 					.wrap(new byte[] { 'f', 'a', 'i', 'l', 'u', 'r', 'e', ' ',
@@ -238,8 +224,7 @@ public class CommunicationTracker {
 								' ', 'r', 'e', 'a', 's', 'o', 'n' }));
 				String errorMessage = new String(failure_bytes.array(), "ASCII");
 				System.err.println("Failure: " + errorMessage);
-				errors = true;
-				return;
+				throw new BtException(errorMessage);
 			}
 
 			interval = (int) responseMap.get(ByteBuffer.wrap(new byte[] { 'i',
@@ -256,8 +241,7 @@ public class CommunicationTracker {
 			if (peers == null) {
 				// real error message later
 				System.err.println("Peers were not extracted");
-				errors = true;
-				return;
+				throw new BtException("Peers were not extracted");
 			}
 			peersList = new ArrayList<Peer>(peers.size());
 			for (Map<ByteBuffer, Object> temp : peers) {
@@ -276,10 +260,8 @@ public class CommunicationTracker {
 				peersList.add(temp_peer);
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			System.err.println("Can't open the connection :c");
-			errors = true;
-			return;
+			throw new BtException("Could not open connection");
 		}
 	}
 
