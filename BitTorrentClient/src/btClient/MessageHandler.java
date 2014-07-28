@@ -191,9 +191,6 @@ public class MessageHandler implements Runnable {
 		PriorityQueue<Piece> queue = new PriorityQueue<Piece>(39, comparator);
 		// Push available pieces into queue that is sorted by piece rarity
 		for (Piece piece : pieces) {
-			if (piece.getIndex() == 27) {
-				piece.incrementPeerCount();
-			}
 			if (!piece.isComplete() && peer.has_piece(piece.getIndex())
 					&& !piece.isLocked()) {
 				queue.add(piece);
