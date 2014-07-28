@@ -67,7 +67,7 @@ public class RUBTClient {
 		CommunicationTracker communicationTracker = new CommunicationTracker(
 				activeTorrent);
 		try {
-			communicationTracker.CommunicateWithTracker("started");
+			communicationTracker.CommunicateWithTracker("started", (int) file.length());
 		} catch (BtException e) {
 			e.printStackTrace();
 			System.err.println("Failed to send started message");
@@ -81,18 +81,29 @@ public class RUBTClient {
 		// Step 4 - Connect with the Peer.
 		// Create new message handler and give it its own thread to run in
 		peers = communicationTracker.getPeersList();
-		Thread thread = new Thread(new MessageHandler(pieces,
-				getTestPeer(peers), activeTorrent.info_hash,
-				communicationTracker.getClientID(), activeTorrent));
-		thread.start();
+		ArrayList<Thread> threadList=new ArrayList<Thread>(peers.size());
+		for (int i=0; i<peers.size();i++){
+			
+			Thread thread = new Thread(new MessageHandler(pieces,
+					peers.get(i), activeTorrent.info_hash,
+					communicationTracker.getClientID(), activeTorrent));
+			threadList.add(thread);
+			threadList.get(i).start();
+		}
+		
+		
 		while (getPercentComplete(pieces) != 100) {
 			System.out.print("\rdownloading: " + getPercentComplete(pieces)
 					+ "%");
 			Thread.sleep(1000);
 		}
+		
 		System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
 		System.out.println();
-		thread.join();
+		//thread.join();
+		for (int i=0; i<peers.size();i++){
+			threadList.get(i).join();
+		}
 		// Check download for completeness
 		for (Piece curr : pieces) {
 			if (!curr.isComplete()) {
@@ -102,8 +113,8 @@ public class RUBTClient {
 			}
 		}
 		try {
-			communicationTracker.CommunicateWithTracker("completed");
-			communicationTracker.CommunicateWithTracker("stopped");
+			communicationTracker.CommunicateWithTracker("completed", (int) file.length());
+			communicationTracker.CommunicateWithTracker("stopped", (int) file.length());
 		} catch (BtException e) {
 			e.printStackTrace();
 			System.err.println("Failed to send completed/stopped");

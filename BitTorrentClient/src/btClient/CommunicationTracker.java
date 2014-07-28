@@ -151,7 +151,7 @@ public class CommunicationTracker {
 	 * 
 	 */
 	@SuppressWarnings("unchecked")
-	public void CommunicateWithTracker(String event) throws BtException {
+	public void CommunicateWithTracker(String event, int downloaded) throws BtException {
 		if (event.equals("completed")) {
 			this.event = "completed";
 			this.downloaded = torrentInfo.file_length;
@@ -165,6 +165,11 @@ public class CommunicationTracker {
 			this.event = "stopped";
 			this.downloaded = torrentInfo.file_length;
 			this.left = 0;
+		}
+		else if(event.equals(" ")){
+			this.event="";
+			this.downloaded=downloaded;
+			this.left=torrentInfo.file_length-downloaded;
 		}
 		HttpURLConnection connection = null;
 		/* get connection port. */
@@ -257,6 +262,7 @@ public class CommunicationTracker {
 				String ipS = new String(ip.array(), "ASCII");
 
 				Peer temp_peer = new Peer(ipS, peerID, peer_port);
+				System.out.println("Id: "+peerID+ " ip: "+ipS+ " peer port: "+peer_port);
 				peersList.add(temp_peer);
 			}
 		} catch (IOException e) {
