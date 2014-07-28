@@ -221,6 +221,14 @@ public class Piece {
 		return peerCount;
 	}
 
+	/**
+	 * @see ReentrantLock#isLocked()
+	 * @return True if Piece is locked by any thread, otherwise false
+	 */
+	public boolean isLocked() {
+		return lock.isLocked();
+	}
+
 	/* ======================= SETTERS ======================= */
 	/**
 	 * Sets all blocks to downloaded and sets completed to true

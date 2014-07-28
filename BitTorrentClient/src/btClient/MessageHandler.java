@@ -10,6 +10,8 @@ package btClient;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 
 /**
  * This class is tasked with deciding which piece to download next and handling
@@ -86,7 +88,7 @@ public class MessageHandler implements Runnable {
 			System.err.println("recieved null peer");
 			return;
 		} else {
-			System.out.println("recieved peer: " + peer.getPeer_id());
+			// System.out.println("recieved peer: " + peer.getPeer_id());
 		}
 		try {
 			if (!peer.establishConnection(info_hash, clientID)) {
@@ -109,13 +111,19 @@ public class MessageHandler implements Runnable {
 				}
 			}
 			while (!choked) {
-				piece = getNextPiece();
+				// If the is no active piece try to get one
+				if (piece == null) {
+					piece = getNextPiece();
+				}
+				// If piece is no longer null we got a new active piece
 				if (piece != null) {
 					// get the next block to download
 					Block block = piece.getNextBlock();
 					// should not happen
 					if (block == null) {
 						System.err.println("set null block");
+						piece.unlock();
+						piece = null;
 						continue;
 					}
 
@@ -128,15 +136,20 @@ public class MessageHandler implements Runnable {
 						peer.decrementPeerCounters(pieces);
 						return;
 					}
-				}else{
-					if(checkCompleteness()){
+					/*
+					 * If piece is still null, either all pieces are complete,
+					 * unavailable or already locked by other threads; so check
+					 * completeness
+					 */
+				} else {
+					if (checkCompleteness()) {
 						try {
 							peer.disconnect();
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
+						return;
 					}
-					return;
 				}
 
 				try {
@@ -151,31 +164,51 @@ public class MessageHandler implements Runnable {
 				}
 
 			}
+			// If we become choked unlock piece so other threads can have a
+			// chance to lock it
 			if (piece != null) {
 				piece.unlock();
 				piece = null;
 			}
 			peer.decrementPeerCounters(pieces);
 			return;
+		} // If disconnected make sure piece is unlocked so other threads can
+			// acquire it
+		if (piece == null) {
+			piece.unlock();
 		}
 		peer.closeEverything();
 		peer.decrementPeerCounters(pieces);
 	}
 
 	/**
-	 * Returns the next piece that the peer has and has not yet been downloaded
+	 * Returns the next piece that the peer has and has not yet been downloaded;
+	 * Implements Rarest-Piece-First Algorithm
 	 * 
 	 * @return the next piece to download
 	 */
 	private Piece getNextPiece() {
+		Comparator<Piece> comparator = new PieceRarityComparator();
+		PriorityQueue<Piece> queue = new PriorityQueue<Piece>(39, comparator);
+		// Push available pieces into queue that is sorted by piece rarity
 		for (Piece piece : pieces) {
-			if (!piece.isComplete() && peer.has_piece(piece.getIndex())) {
-				// attempt to acquire lock on piece
-				if (piece.tryLock()) {
-					return piece;
-				}
+			if (piece.getIndex() == 27) {
+				piece.incrementPeerCount();
+			}
+			if (!piece.isComplete() && peer.has_piece(piece.getIndex())
+					&& !piece.isLocked()) {
+				queue.add(piece);
 			}
 		}
+		Piece piece;
+		// Try to acquire rarest piece, if unavailable try next rarist etc
+		while (!queue.isEmpty()) {
+			piece = queue.poll();
+			if (piece.tryLock()) {
+				return piece;
+			}
+		}
+		// return null if unable to acquire piece
 		return null;
 	}
 
@@ -237,15 +270,13 @@ public class MessageHandler implements Runnable {
 				return;
 			}
 			piece.writeBlock(message);
+			// Add number of bytes to downloaded counter
 			peer.downloaded(message.length
 					- (BtUtils.PIECE_HEADER_SIZE + BtUtils.PREFIX_LENGTH));
-			/*
-			 * System.out.println("wrote Piece:" + currBlock.getPieceIndex() +
-			 * " block:" + currBlock.getIndex());
-			 */
+
+			/* Check for piece completeness and hash correctness */
+			piece.checkComplete();
 			if (piece.isComplete()) {
-				// check that piece has downloaded correctly (check for correct
-				// hash)
 				if (!piece.checkHash(torrent.piece_hashes[piece.getIndex()]
 						.array())) {
 					// If hash mismatch, clear piece and try again
@@ -288,10 +319,10 @@ public class MessageHandler implements Runnable {
 				pieces.size()));
 		peer.incrementPeerCounters(pieces);
 	}
-	
-	private boolean checkCompleteness(){
-		for(Piece piece : pieces){
-			if(!piece.isComplete()){
+
+	private boolean checkCompleteness() {
+		for (Piece piece : pieces) {
+			if (!piece.isComplete()) {
 				return false;
 			}
 		}
