@@ -270,7 +270,7 @@ public class MessageHandler implements Runnable {
 			}
 			piece.writeBlock(message);
 			// Add number of bytes to downloaded counter
-			peer.downloaded(message.length
+			peer.uploaded(message.length
 					- (BtUtils.PIECE_HEADER_SIZE + BtUtils.PREFIX_LENGTH));
 
 			/* Check for piece completeness and hash correctness */

@@ -437,6 +437,7 @@ public class Peer {
 		message.put(piece.getBytes(offset, size));
 		outputStream.write(message.array());
 		outputStream.flush();
+		downloaded += size;
 	}
 
 	/**
