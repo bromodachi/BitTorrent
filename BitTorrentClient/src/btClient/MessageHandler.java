@@ -81,7 +81,6 @@ public class MessageHandler implements Runnable {
 		wasted = 0;
 	}
 
-	// blah
 	@Override
 	public void run() {
 		if (peer == null) {
