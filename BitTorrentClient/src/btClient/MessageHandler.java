@@ -87,29 +87,38 @@ public class MessageHandler implements Runnable {
 			System.err.println("recieved null peer");
 			return;
 		} else {
-			// System.out.println("recieved peer: " + peer.getPeer_id());
+			 System.out.println("recieved peer: " + peer.getPeer_id());
 		}
 		try {
 			if (!peer.establishConnection(info_hash, clientID)) {
 				return;
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
 			System.err.println(e.getMessage());
 			return;
 		}
 		// need to add send bitfield
+		mainLoop:
 		while (peer.isConnected()) {
 			while (choked) {
+				System.out.println("choked " + Thread.currentThread().getId());
+				if(checkCompleteness()){
+					try {
+						peer.disconnect();
+					} catch (IOException e) {
+						
+					}
+					return;
+				}
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
 					System.err.println("An error has encountered. Exiting...");
-					peer.decrementPeerCounters(pieces);
-					return;
+					break mainLoop;
 				}
 			}
 			while (!choked) {
+				//System.out.println("unchoked " + "Thread_ID:" + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 				// If the is no active piece try to get one
 				if (piece == null) {
 					piece = getNextPiece();
@@ -131,9 +140,7 @@ public class MessageHandler implements Runnable {
 					} catch (IOException e) {
 						System.err
 								.println("An error has encountered. Exiting...");
-						piece.unlock();
-						peer.decrementPeerCounters(pieces);
-						return;
+						continue;
 					}
 					/*
 					 * If piece is still null, either all pieces are complete,
@@ -142,12 +149,7 @@ public class MessageHandler implements Runnable {
 					 */
 				} else {
 					if (checkCompleteness()) {
-						try {
-							peer.disconnect();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-						return;
+						break mainLoop;
 					}
 				}
 
@@ -155,11 +157,7 @@ public class MessageHandler implements Runnable {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
 					System.err.println("Fatal error.... disconnecting");
-					if (piece != null) {
-						piece.unlock();
-					}
-					peer.decrementPeerCounters(pieces);
-					return;
+					break mainLoop;
 				}
 
 			}
@@ -169,12 +167,11 @@ public class MessageHandler implements Runnable {
 				piece.unlock();
 				piece = null;
 			}
-			peer.decrementPeerCounters(pieces);
-			return;
 		} // If disconnected make sure piece is unlocked so other threads can
 			// acquire it
-		if (piece == null) {
+		if (piece != null) {
 			piece.unlock();
+			piece = null;
 		}
 		peer.closeEverything();
 		peer.decrementPeerCounters(pieces);
@@ -223,16 +220,21 @@ public class MessageHandler implements Runnable {
 			choked = true;
 			if (piece != null) {
 				piece.unlock();
+				piece = null;
 			}
 			break;
 		case BtUtils.UNCHOKE_ID:
+			System.out.println("Unchoked Message " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 			choked = false;
 			break;
 		case BtUtils.INTERESTED_ID:
+			System.out.println("Interested Message " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 			break;
 		case BtUtils.UNINTERESTED_ID:
+			System.out.println("Uninterested Message  " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 			break;
 		case BtUtils.HAVE_ID:
+			System.out.println("Have Message " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 			parser = ByteBuffer.wrap(message);
 			int index = parser.getInt(1);
 			if (index >= 0 && index < pieces.size()) {
@@ -244,6 +246,7 @@ public class MessageHandler implements Runnable {
 			}
 			break;
 		case BtUtils.BITFIELD_ID:
+			System.out.println("Bitfield Message " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 			bitField(message);
 			try {
 				peer.sendInterested();
@@ -252,8 +255,10 @@ public class MessageHandler implements Runnable {
 			}
 			break;
 		case BtUtils.REQUEST_ID:
+			System.out.println("Request Message " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 			break;
 		case BtUtils.PIECE_ID:
+			System.out.println("Piece Message " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 			if (piece == null) {
 				System.err.println("ERROR: Received unexpected piece message");
 				wasted += message.length;

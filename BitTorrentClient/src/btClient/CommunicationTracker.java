@@ -98,6 +98,10 @@ public class CommunicationTracker {
 		byte[] random_id = new byte[20];
 		Random random = new Random();
 		random.nextBytes(random_id);
+		random_id[0] = (byte)'C';
+		random_id[1] = (byte)'G';
+		random_id[2] = (byte)'C';
+		random_id[3] = (byte)'U';
 		return random_id;
 	}
 

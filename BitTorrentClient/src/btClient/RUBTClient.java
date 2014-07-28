@@ -93,17 +93,22 @@ public class RUBTClient {
 		
 		
 		while (getPercentComplete(pieces) != 100) {
-			System.out.print("\rdownloading: " + getPercentComplete(pieces)
+			/*System.out.print("\rdownloading: " + getPercentComplete(pieces)
 					+ "%");
-			Thread.sleep(1000);
+			Thread.sleep(1000);*/
+			
+			for (Thread thread : threadList){
+				thread.join(100);
+				if(!thread.isAlive()){
+					threadList.remove(thread);
+				}
+			}
 		}
-		
+		for (Thread thread : threadList){
+			thread.join();
+		}
 		System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
 		System.out.println();
-		//thread.join();
-		for (int i=0; i<peers.size();i++){
-			threadList.get(i).join();
-		}
 		// Check download for completeness
 		for (Piece curr : pieces) {
 			if (!curr.isComplete()) {

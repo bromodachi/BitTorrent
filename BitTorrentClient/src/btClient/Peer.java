@@ -528,6 +528,9 @@ public class Peer {
 	 *            An array list of {@link Piece} objects
 	 */
 	public void decrementPeerCounters(ArrayList<Piece> pieces) {
+		if(pieces == null){
+			return;
+		}
 		for (Piece piece : pieces) {
 			if (has_piece[piece.getIndex()]) {
 				piece.decrementPeerCount();
