@@ -40,7 +40,7 @@ public class Peer {
 	/**
 	 * boolean array indicating whether or not this peer has each piece
 	 */
-	private boolean[] has_piece = null;
+	private boolean[] has_piece = new boolean[39];
 	/**
 	 * indicates whether or not this piece is choked
 	 */
@@ -236,21 +236,15 @@ public class Peer {
 		inputStream = new DataInputStream(connection.getInputStream());
 		outputStream = new DataOutputStream(connection.getOutputStream());
 		connection.setSoTimeout(BtUtils.MAX_TIME);
-		ByteBuffer handshake = ByteBuffer.allocate(BtUtils.p2pHandshakeLength);
-		handshake.put(BtUtils.p2pHandshakeHeader);
+		
 		info_hash.rewind();
 		clientID.rewind();
-		while (info_hash.position() < info_hash.capacity()) {
-			System.out.println("info_hash " + info_hash.array());
-			handshake.put(info_hash.get());
-		}
-		while (clientID.position() < clientID.capacity()) {
-			handshake.put(clientID.get());
-		}
-
-		handshake.rewind();
-		byte[] bytes = new byte[BtUtils.p2pHandshakeLength];
-		handshake.get(bytes, 0, handshake.capacity());
+		byte[] b = new byte[info_hash.capacity()];
+		info_hash.get(b);
+		byte[] c = new byte[clientID.capacity()];
+		clientID.get(c);
+		
+		byte[] bytes = getHandShakeBytes(b,c);
 
 		outputStream.write(bytes);
 		outputStream.flush();
@@ -268,6 +262,28 @@ public class Peer {
 		return true;
 	}
 
+	public byte[] getHandShakeBytes(byte [] info_hash, byte[]  clientID)
+	{
+		int index=0;
+		byte[] handshake = new byte[BtUtils.p2pHandshakeLength];
+		try{
+			
+		System.arraycopy(BtUtils.p2pHandshakeHeader, 0, handshake, index, BtUtils.p2pHandshakeHeader.length);
+		System.out.println(BtUtils.p2pHandshakeHeader.length);
+		index+=BtUtils.p2pHandshakeHeader.length;
+		System.arraycopy(info_hash, 0, handshake, index, info_hash.length);
+		index+=info_hash.length;
+		
+		System.arraycopy(clientID, 0, handshake, index, clientID.length);
+		
+		}catch(IndexOutOfBoundsException  e){
+			//honestly, I don't think this will happen. Idk why keep this but
+			//I'm going to
+			System.out.println("Error");
+		}	
+		return handshake;
+
+}
 	/**
 	 * Just verifies that the info hash are the same. If not, we should drop the
 	 * connection
