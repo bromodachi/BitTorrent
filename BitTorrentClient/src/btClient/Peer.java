@@ -11,6 +11,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class Peer {
 	private Socket connection;
 	private DataInputStream inputStream;
 	private DataOutputStream outputStream;
+	private boolean isDownloading=true; //set this to false as default later
 	/**
 	 * The number of bytes that this peer has downloaded from the client
 	 */
@@ -40,7 +42,7 @@ public class Peer {
 	/**
 	 * boolean array indicating whether or not this peer has each piece
 	 */
-	private boolean[] has_piece = new boolean[39];
+	private boolean[] has_piece = new boolean[250];
 	/**
 	 * indicates whether or not this piece is choked
 	 */
@@ -114,6 +116,10 @@ public class Peer {
 	}
 
 	/* =============== Setters ================ */
+	
+	public void setIsDownloading(boolean setMe){
+		this.isDownloading=setMe;
+	}
 	public void setInterval(int interval) {
 		this.interval = interval;
 	}
@@ -167,6 +173,10 @@ public class Peer {
 	}
 
 	/* =============== GETTERS ============== */
+	
+	public boolean getIsDownloading(){
+		return isDownloading;
+	}
 	/**
 	 * Checks if a this peer has the piece indicated by the piece index
 	 * 
@@ -215,6 +225,18 @@ public class Peer {
 		inputStream.close();
 		outputStream.close();
 		connection.close();
+	}
+	
+	/**
+	 * Keep the connection alive
+	 */
+	public void keepAlive(){
+		try {
+			connection.setSoTimeout(BtUtils.MAX_TIME);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -284,6 +306,17 @@ public class Peer {
 		return handshake;
 
 }
+	
+	public synchronized void sendMeToTheRightSend(int i){
+		switch(i){
+			/*
+			 * SendKeep alive be 1
+			 * send choke be 2
+			 * send unchoke be 3
+			 * send interested */
+		}
+		
+	}
 	/**
 	 * Just verifies that the info hash are the same. If not, we should drop the
 	 * connection
@@ -552,6 +585,14 @@ public class Peer {
 			if (has_piece[piece.getIndex()]) {
 				piece.decrementPeerCount();
 			}
+		}
+	}
+	public synchronized void handleSendMessages(sendMessages message){
+		try {
+			message.sendMessage();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 }

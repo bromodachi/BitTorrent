@@ -267,7 +267,9 @@ public class CommunicationTracker {
 
 				Peer temp_peer = new Peer(ipS, peerID, peer_port);
 				System.out.println("Id: "+peerID+ " ip: "+ipS+ " peer port: "+peer_port);
+				if(ipS.equals("128.6.171.131") ||ipS.equals("128.6.171.130")){
 				peersList.add(temp_peer);
+				}
 			}
 		} catch (IOException e) {
 			System.err.println("Can't open the connection :c");

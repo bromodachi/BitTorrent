@@ -13,6 +13,11 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.PriorityQueue;
 
+import btClient.sendMessages.sendHave;
+import btClient.sendMessages.sendInterested;
+import btClient.sendMessages.sendBlock;
+ 
+
 /**
  * This class is tasked with deciding which piece to download next and handling
  * the messages received from the peer. This class also handles the logic for
@@ -22,6 +27,11 @@ import java.util.PriorityQueue;
  * 
  */
 public class MessageHandler implements Runnable {
+	
+	/**
+	 * Array list of peers
+	 */
+	private ArrayList<Peer> peers;
 	/**
 	 * An array list of {@link Piece} objects that make up the file to be
 	 * downloaded
@@ -71,7 +81,7 @@ public class MessageHandler implements Runnable {
 	 * @param {@link#torr}
 	 */
 	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
-			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
+			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr, ArrayList<Peer> peers) {
 		this.pieces = pieces;
 		this.peer = peer;
 		this.info_hash = info_hash;
@@ -79,6 +89,7 @@ public class MessageHandler implements Runnable {
 		choked = true;
 		this.torrent = torr;
 		wasted = 0;
+		this.peers=peers;
 	}
 
 	@Override
@@ -123,6 +134,7 @@ public class MessageHandler implements Runnable {
 				// If the is no active piece try to get one
 				if (piece == null) {
 					piece = getNextPiece();
+					
 				}
 				// If piece is no longer null we got a new active piece
 				if (piece != null) {
@@ -136,18 +148,9 @@ public class MessageHandler implements Runnable {
 						continue;
 					}
 
-					try {
-						peer.sendRequest(block);
-					} catch (IOException e) {
-						System.err
-								.println("An error has encountered. Exiting...");
-						continue;
-					}
-					/*
-					 * If piece is still null, either all pieces are complete,
-					 * unavailable or already locked by other threads; so check
-					 * completeness
-					 */
+					sendMessages message=new sendBlock(block, peer.getOutputStream());
+					//peer.sendRequest(block);
+					peer.handleSendMessages(message);
 				} else {
 					if (checkCompleteness()) {
 						break mainLoop;
@@ -179,6 +182,7 @@ public class MessageHandler implements Runnable {
 			piece = null;
 		}
 		peer.closeEverything();
+		peer.setIsDownloading(false);
 		peer.decrementPeerCounters(pieces);
 	}
 
@@ -190,7 +194,7 @@ public class MessageHandler implements Runnable {
 	 */
 	private Piece getNextPiece() {
 		Comparator<Piece> comparator = new PieceRarityComparator();
-		PriorityQueue<Piece> queue = new PriorityQueue<Piece>(39, comparator);
+		PriorityQueue<Piece> queue = new PriorityQueue<Piece>(250, comparator);
 		// Push available pieces into queue that is sorted by piece rarity
 		for (Piece piece : pieces) {
 			if (!piece.isComplete() && peer.has_piece(piece.getIndex())
@@ -218,8 +222,12 @@ public class MessageHandler implements Runnable {
 	 * @throws IOException
 	 * @throws BtException
 	 */
-	private void handleMessage(byte[] message) throws IOException, BtException {
+	private synchronized  void handleMessage(byte[] message) throws IOException, BtException {
 		ByteBuffer parser;
+		if(message.length==0){
+			peer.keepAlive();
+			return;
+		}
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
 			choked = true;
@@ -253,11 +261,9 @@ public class MessageHandler implements Runnable {
 		case BtUtils.BITFIELD_ID:
 			System.out.println("Bitfield Message " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
 			bitField(message);
-			try {
-				peer.sendInterested();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			sendMessages inter=new sendInterested(peer.getOutputStream());
+			peer.handleSendMessages(inter);
+			//peer.sendInterested();
 			break;
 		case BtUtils.REQUEST_ID:
 			System.out.println("Request Message " + Thread.currentThread().getId() + " " + Thread.currentThread().getName());
@@ -297,7 +303,11 @@ public class MessageHandler implements Runnable {
 						return;
 					}
 				} else {
-					peer.sendHave(piece.getIndex());
+					for(Peer peerFor: this.peers) {
+						sendMessages passMess=new sendHave(piece.getIndex(), peer.getOutputStream());
+						peer.handleSendMessages(passMess);
+//	peerFor.sendHave(piece.getIndex());
+					}
 				}
 				piece.unlock();
 				piece = null;
@@ -344,4 +354,5 @@ public class MessageHandler implements Runnable {
 	public int getWasted() {
 		return wasted;
 	}
+	
 }
