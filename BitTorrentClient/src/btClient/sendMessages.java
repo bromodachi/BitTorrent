@@ -164,15 +164,16 @@ public class sendMessages {
 			this.outputStream=outputStream;
 		}
 		public void sendMessage() throws IOException {
+			
 			byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
 			        				+ BtUtils.PREFIX_LENGTH];
 			        		ByteBuffer message = ByteBuffer.wrap(bytes);
-			        		message.putInt(BtUtils.REQUEST_LENGTH_PREFIX);
-			        		message.put((BtUtils.REQUEST_ID));
-			        		message.putInt(block.getPieceIndex());
-			        		message.putInt(block.getOffset());
-			        		message.putInt(block.getSize());
-			        		outputStream.write(message.array());
+			        		outputStream.writeInt(BtUtils.REQUEST_LENGTH_PREFIX);
+			        		outputStream.write((BtUtils.REQUEST_ID));
+			        		outputStream.writeInt(block.getPieceIndex());
+			        		outputStream.writeInt(block.getOffset());
+			        		outputStream.writeInt(block.getSize());
+			        		
 			
 		}
 	}

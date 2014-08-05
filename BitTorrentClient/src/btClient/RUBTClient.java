@@ -333,7 +333,7 @@ public class RUBTClient {
 					/*System.out.print("\rdownloading: " + getPercentComplete(pieces)
 							+ "%");
 					Thread.sleep(1000);*/
-					timer.scheduleAtFixedRate(test, 30000, 30000);
+			//		timer.scheduleAtFixedRate(test, 30000, 30000);
 					
 				}
 				for (Thread thread : threadList){

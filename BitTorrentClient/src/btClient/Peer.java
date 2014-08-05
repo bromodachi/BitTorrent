@@ -114,6 +114,13 @@ public class Peer {
 	public boolean isChoked() {
 		return choked;
 	}
+	private static boolean [] bool;
+	public boolean [] getPeerBool(){
+		return bool;
+	}
+	public static void setBool(boolean [] b){
+		bool=b;
+	}
 
 	/* =============== Setters ================ */
 	
@@ -552,6 +559,7 @@ public class Peer {
 			}
 			// don't need else, default value is false.
 		}
+		setBool(bool);
 		return bool;
 	}
 
