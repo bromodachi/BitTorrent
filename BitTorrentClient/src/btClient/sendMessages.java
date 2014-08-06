@@ -141,7 +141,7 @@ public class sendMessages {
 			this.outputStream=outputStream;
 		}
 		public void sendMessage() throws IOException {
-			int payloadLength = 0; // need to figure out code for adding payload
+			int payloadLength = size; // need to figure out code for adding payload
 			byte[] bytes = new byte[BtUtils.PIECE_LENGTH_PREFIX
 					+ BtUtils.PREFIX_LENGTH + payloadLength];
 			ByteBuffer message = ByteBuffer.wrap(bytes);

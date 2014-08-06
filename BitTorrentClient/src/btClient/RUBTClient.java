@@ -30,8 +30,8 @@ public class RUBTClient {
 	static File file = null;
 	static ArrayList<Peer> peers = null;
 	static CommunicationTracker communicationTracker;
-	static boolean clientIsDownloading=false;
-	static ArrayList<Peer> chokers=new ArrayList<Peer>();//
+	static boolean clientIsDownloading = false;
+	static ArrayList<Peer> chokers = new ArrayList<Peer>();//
 
 	/**
 	 * This is the main method that is called upon program startup, this method
@@ -54,31 +54,9 @@ public class RUBTClient {
 		}
 		GUIFrame gui = new GUIFrame();
 		gui.run();
-	/*	RUBTClientThread t=new RUBTClientThread(args);
-		Thread clientThread=new Thread(t);
-		t.start=true;
-		clientThread.start();
-		BufferedReader br=new BufferedReader(new InputStreamReader(System.in));
-		String reader;
-		
-		
-		do{
-			reader=br.readLine();
-			
-			if(reader.equalsIgnoreCase("end")){
-				System.out.println("here");
-				t.end=true;
-				clientThread.join();
-				break;
-			}
-		}while(true);
-		*/
 
 	}// END MAIN
 
-	public static void start(){
-		
-	}
 	/**
 	 * Validates the command line arguments to see if the parameters are good.
 	 * The program exits if the arguments are bad.
@@ -157,17 +135,20 @@ public class RUBTClient {
 		}
 		return null;
 	}
+
 	/**
-	 * Adds a peer to list of chokers. This list will later be used to unchoke a peer
+	 * Adds a peer to list of chokers. This list will later be used to unchoke a
+	 * peer
+	 * 
 	 * @param p
 	 */
-	public static void listOfChokers(Peer p){
+	public static void listOfChokers(Peer p) {
 		chokers.add(p);
 	}
-	
-	public static Peer getAChokePeer (int i){
+
+	public static Peer getAChokePeer(int i) {
 		return chokers.get(i);
-		
+
 	}
 
 	/**
@@ -233,44 +214,45 @@ public class RUBTClient {
 		}
 		return (int) (((float) completed / (float) pieces.size()) * 100);
 	}
-	
-	
-	public static class RUBTClientThread implements Runnable{
-	//	private boolean start=false;
-		public boolean end=false;
+
+	public static class RUBTClientThread implements Runnable {
+		// private boolean start=false;
+		public boolean end = false;
 		Worker w;
-		private boolean start=false;
-		String [] arg;
+		private boolean start = false;
+		String[] arg;
 		byte[] torrentBytes;
 		File file;
 		TorrentInfo info;
-		public void setStart(boolean b){
-			this.start=b;
+
+		public void setStart(boolean b) {
+			this.start = b;
 		}
-		public RUBTClientThread(TorrentInfo info, File file){
-			this.info=info;
+
+		public RUBTClientThread(TorrentInfo info, File file) {
+			this.info = info;
 			this.file = file;
-			//this.file=
 		}
+
 		@Override
 		public void run() {
-			// TODO Auto-generated method stub
-			if(start){
-				w=new Worker(info,  file);
+			if (start) {
+				w = new Worker(info, file);
 				try {
-					w.initStart();;
+					w.initStart();
+					;
 				} catch (IOException | BencodingException
 						| InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
-			
-			while(true){
-				
-				if(end){
+
+			while (true) {
+
+				if (end) {
 					try {
-						communicationTracker.CommunicateWithTracker("stopped", (int) file.length());
+						communicationTracker.CommunicateWithTracker("stopped",
+								(int) file.length());
 						break;
 					} catch (BtException e) {
 						// TODO Auto-generated catch block
@@ -279,30 +261,34 @@ public class RUBTClient {
 					break;
 				}
 			}
-			
-			
+
 		}
-		public String getFileName(){
+
+		public String getFileName() {
 			return file.getName();
 		}
 	}
+
 	public static class Worker {
-		String [] args;
+		String[] args;
 		TorrentInfo torrent;
 		File file;
-		ArrayList<Piece> pieces ;
+		ArrayList<Piece> pieces;
 		ArrayList<Peer> peers = null;
 		CommunicationTracker communicationTracker;
-		ArrayList<Peer> chokers=new ArrayList<Peer>();
-		public Worker(TorrentInfo torrentInfo, File file){
-			
-			this.torrent=torrentInfo;
-			this.file=file;
+		ArrayList<Peer> chokers = new ArrayList<Peer>();
+
+		public Worker(TorrentInfo torrentInfo, File file) {
+
+			this.torrent = torrentInfo;
+			this.file = file;
 			this.pieces = new ArrayList<Piece>();
 		}
+
 		private boolean createPieces(ArrayList<Piece> pieces,
 				TorrentInfo activeTorrent) throws FileNotFoundException {
-			int leftover = activeTorrent.file_length % activeTorrent.piece_length;
+			int leftover = activeTorrent.file_length
+					% activeTorrent.piece_length;
 
 			for (int i = 0; i < activeTorrent.piece_hashes.length; i++) {
 				if (i == (activeTorrent.piece_hashes.length - 1)) {
@@ -317,75 +303,78 @@ public class RUBTClient {
 			}
 			return checkCompleteness(pieces);
 		}
-		// Step 1 - Take the command line arguments
-		public void initStart() throws IOException,
-		BencodingException, InterruptedException{
 
-				// Step 3 - Send an HTTP GET request to the tracker
-				communicationTracker = new CommunicationTracker(
-						torrent);
-				try {
-					communicationTracker.CommunicateWithTracker("started", (int) file.length());
-				} catch (BtException e) {
-					e.printStackTrace();
-					System.err.println("Failed to send started message");
+		public void initStart() throws IOException, BencodingException,
+				InterruptedException {
+
+			// Step 3 - Send an HTTP GET request to the tracker
+			communicationTracker = new CommunicationTracker(torrent);
+			try {
+				communicationTracker.CommunicateWithTracker("started",
+						(int) file.length());
+			} catch (BtException e) {
+				e.printStackTrace();
+				System.err.println("Failed to send started message");
+				return;
+			}
+			// Any errors in the communication tracker, we shouldn't proceed.
+			if (torrent == null) {
+				System.out.println("NULL");
+			}
+			if (pieces == null) {
+				System.out.println("NULL");
+			}
+			if (createPieces(this.pieces, torrent)) {
+				System.out.println("File is already complete");
+				return;
+			}
+			// Step 4 - Connect with the Peer.
+			// Create new message handler and give it its own thread to run in
+			peers = communicationTracker.getPeersList();
+			ArrayList<Thread> threadList = new ArrayList<Thread>(peers.size());
+			clientIsDownloading = true;
+			for (int i = 0; i < peers.size(); i++) {
+
+				Thread thread = new Thread(new MessageHandler(pieces,
+						peers.get(i), communicationTracker.getClientID(),
+						torrent, peers));
+				threadList.add(thread);
+			}
+			for (Thread thread : threadList) {
+				thread.start();
+			}
+			while (getPercentComplete(pieces) != 100) {
+				/*
+				 * System.out.print("\rdownloading: " +
+				 * getPercentComplete(pieces) + "%"); Thread.sleep(1000);
+				 */
+				// timer.scheduleAtFixedRate(test, 30000, 30000);
+
+			}
+			for (Thread thread : threadList) {
+
+				thread.join();
+			}
+			System.out.print("\rdownloading: " + getPercentComplete(pieces)
+					+ "%");
+			System.out.println();
+			// Check download for completeness
+			for (Piece curr : pieces) {
+				if (!curr.isComplete()) {
+					System.err
+							.println("Disconnected before downloading all pieces");
 					return;
 				}
-				// Any errors in the communication tracker, we shouldn't proceed.
-				if(torrent==null){
-					System.out.println("NULL");
-				}
-				if(pieces==null){
-					System.out.println("NULL");
-				}
-				if (createPieces(this.pieces, torrent)) {
-					System.out.println("File is already complete");
-					return;
-				}
-				// Step 4 - Connect with the Peer.
-				// Create new message handler and give it its own thread to run in
-				peers = communicationTracker.getPeersList();
-				ArrayList<Thread> threadList=new ArrayList<Thread>(peers.size());
-				clientIsDownloading=true;
-				for (int i=0; i<peers.size();i++){
-					
-					Thread thread = new Thread(new MessageHandler(pieces,
-							peers.get(i), torrent.info_hash,
-							communicationTracker.getClientID(), torrent, peers));
-					threadList.add(thread);
-				}
-				for(Thread thread: threadList){
-					thread.start();
-				}
-				while (getPercentComplete(pieces) != 100) {
-					/*System.out.print("\rdownloading: " + getPercentComplete(pieces)
-							+ "%");
-					Thread.sleep(1000);*/
-			//		timer.scheduleAtFixedRate(test, 30000, 30000);
-					
-				}
-				for (Thread thread : threadList){
-					
-					thread.join();
-				}
-				System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
-				System.out.println();
-				// Check download for completeness
-				for (Piece curr : pieces) {
-					if (!curr.isComplete()) {
-						System.err
-								.println("Disconnected before downloading all pieces");
-						return;
-					}
-				}
-				try {
-					communicationTracker.CommunicateWithTracker("completed", (int) file.length());
-					
-				} catch (BtException e) {
-					e.printStackTrace();
-					System.err.println("Failed to send completed/stopped");
-				}
-				System.out.println("Download successful");
-	}
+			}
+			try {
+				communicationTracker.CommunicateWithTracker("completed",
+						(int) file.length());
+
+			} catch (BtException e) {
+				e.printStackTrace();
+				System.err.println("Failed to send completed/stopped");
+			}
+			System.out.println("Download successful");
+		}
 	}
 }

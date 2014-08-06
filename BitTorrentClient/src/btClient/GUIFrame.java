@@ -32,16 +32,21 @@ import btClient.RUBTClient.Worker;
 
 @SuppressWarnings("serial")
 public class GUIFrame extends JFrame implements ActionListener, Runnable {
-	private ArrayList<RUBTClientThread> torrents;
+	private ArrayList<ActiveTorrent> torrents;
 	private GUIFrame frame = this;
 	private JTable torrentTable;
 
+	
 	public GUIFrame() {
+		setupFrame();
+	}
+	
+	private void setupFrame(){
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setMinimumSize(new Dimension(400, 300));
 		setPreferredSize(new Dimension(600, 800));
 		setTitle("Exceptional BitTorrent Client");
-		torrents = new ArrayList<RUBTClientThread>();
+		torrents = new ArrayList<ActiveTorrent>();
 
 		JSplitPane splitPane = new JSplitPane();
 		splitPane.setPreferredSize(new Dimension(600, 800));
@@ -91,12 +96,12 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 			@Override
 			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
 				frame.setVisible(false);
-				for (RUBTClientThread torrent : torrents) {
-				/*	try {
+				for (ActiveTorrent torrent : torrents) {
+					try {
 						torrent.stop();
 					} catch (BtException | InterruptedException e) {
 						// do nothing
-					}*/
+					}
 				}
 			}
 		});
@@ -108,7 +113,12 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		this.requestFocus();
 
 		while (true) {
-
+			validate();
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 
 	}
@@ -172,8 +182,8 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		} else {
 			return;
 		}
-		RUBTClientThread t=new RUBTClientThread(new TorrentInfo(BtUtils.getFileBytes(torrentInfo)), file);
-		torrents.add(t);
+		ActiveTorrent torrent=new ActiveTorrent(new TorrentInfo(BtUtils.getFileBytes(torrentInfo)), file);
+		torrents.add(torrent);
 		Object [] row = new Object [3];
 		row[0] = (Object)file.getName();
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
@@ -183,7 +193,7 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 	}
 
 	private void removeTorrent() throws IOException, BtException, InterruptedException {
-	/*	int row = torrentTable.getSelectedRow();
+		int row = torrentTable.getSelectedRow();
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		String fileName = (String) model.getValueAt(row, 0);
 		for(ActiveTorrent torrent : torrents){
@@ -193,26 +203,24 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 				break;
 			}
 		}
-		model.removeRow(row);*/
+		model.removeRow(row);
 	}
 
 	private void startTorrent() throws IOException, BtException {
 		int row = torrentTable.getSelectedRow();
 		TableModel model = torrentTable.getModel();
 		String fileName = (String) model.getValueAt(row, 0);
-		for(RUBTClientThread torrent : torrents){
+		for(ActiveTorrent torrent : torrents){
 			if(fileName.equals(torrent.getFileName())){
 				
-				Thread clientThread=new Thread(torrent);
-				torrent.setStart(true);
-				clientThread.start();
+				torrent.start();
 				break;
 			}
 		}
 	}
 
 	private void stopTorrent() throws InterruptedException, BtException {
-	/*	int row = torrentTable.getSelectedRow();
+		int row = torrentTable.getSelectedRow();
 		TableModel model = torrentTable.getModel();
 		String fileName = (String) model.getValueAt(row, 0);
 		for(ActiveTorrent torrent : torrents){
@@ -220,6 +228,6 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 				torrent.stop();
 				break;
 			}
-		}*/
+		}
 	}
 }
