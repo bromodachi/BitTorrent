@@ -49,7 +49,12 @@ public class RUBTClient {
 	 */
 	public static void main(String[] args) throws IOException,
 			BencodingException, InterruptedException {
-		RUBTClientThread t=new RUBTClientThread(args);
+		if (!validateArgs(args)) {
+			return;
+		}
+		GUIFrame gui = new GUIFrame();
+		gui.run();
+	/*	RUBTClientThread t=new RUBTClientThread(args);
 		Thread clientThread=new Thread(t);
 		t.start=true;
 		clientThread.start();
@@ -67,7 +72,7 @@ public class RUBTClient {
 				break;
 			}
 		}while(true);
-		
+		*/
 
 	}// END MAIN
 
@@ -236,16 +241,24 @@ public class RUBTClient {
 		Worker w;
 		private boolean start=false;
 		String [] arg;
-		public RUBTClientThread(String [] args){
-			arg=args;
+		byte[] torrentBytes;
+		File file;
+		TorrentInfo info;
+		public void setStart(boolean b){
+			this.start=b;
+		}
+		public RUBTClientThread(TorrentInfo info, File file){
+			this.info=info;
+			this.file = file;
+			//this.file=
 		}
 		@Override
 		public void run() {
 			// TODO Auto-generated method stub
 			if(start){
-				w=new Worker(arg);
+				w=new Worker(info,  file);
 				try {
-					w.main();
+					w.initStart();;
 				} catch (IOException | BencodingException
 						| InterruptedException e) {
 					// TODO Auto-generated catch block
@@ -269,36 +282,48 @@ public class RUBTClient {
 			
 			
 		}
+		public String getFileName(){
+			return file.getName();
+		}
 	}
 	public static class Worker {
 		String [] args;
-		public Worker(String [] arg){
-			this.args=arg;
+		TorrentInfo torrent;
+		File file;
+		ArrayList<Piece> pieces ;
+		ArrayList<Peer> peers = null;
+		CommunicationTracker communicationTracker;
+		ArrayList<Peer> chokers=new ArrayList<Peer>();
+		public Worker(TorrentInfo torrentInfo, File file){
+			
+			this.torrent=torrentInfo;
+			this.file=file;
+			this.pieces = new ArrayList<Piece>();
+		}
+		private boolean createPieces(ArrayList<Piece> pieces,
+				TorrentInfo activeTorrent) throws FileNotFoundException {
+			int leftover = activeTorrent.file_length % activeTorrent.piece_length;
+
+			for (int i = 0; i < activeTorrent.piece_hashes.length; i++) {
+				if (i == (activeTorrent.piece_hashes.length - 1)) {
+					pieces.add(new Piece(i, leftover, i
+							* activeTorrent.piece_length, file,
+							activeTorrent.piece_hashes[i].array()));
+				} else {
+					pieces.add(new Piece(i, activeTorrent.piece_length, i
+							* activeTorrent.piece_length, file,
+							activeTorrent.piece_hashes[i].array()));
+				}
+			}
+			return checkCompleteness(pieces);
 		}
 		// Step 1 - Take the command line arguments
-		public void main() throws IOException,
+		public void initStart() throws IOException,
 		BencodingException, InterruptedException{
-				if (!validateArgs(args)) {
-					return;
-				}
-				ArrayList<Piece> pieces = new ArrayList<Piece>();
-
-				// Step 2 - Open the .torrent file and parse the data inside
-				byte[] torrentBytes = getFileBytes(args[0]);
-				TorrentInfo activeTorrent = new TorrentInfo(torrentBytes);
-				// Create Piece objects based on activeTorrent info and add them to
-				// pieces list
-				file = new File(args[1]);
-				if (!file.createNewFile()) {
-					if (!file.exists()) {
-						System.err.println("ERROR: Failed to create download file");
-						return;
-					}
-				}
 
 				// Step 3 - Send an HTTP GET request to the tracker
 				communicationTracker = new CommunicationTracker(
-						activeTorrent);
+						torrent);
 				try {
 					communicationTracker.CommunicateWithTracker("started", (int) file.length());
 				} catch (BtException e) {
@@ -307,7 +332,13 @@ public class RUBTClient {
 					return;
 				}
 				// Any errors in the communication tracker, we shouldn't proceed.
-				if (createPieces(pieces, activeTorrent)) {
+				if(torrent==null){
+					System.out.println("NULL");
+				}
+				if(pieces==null){
+					System.out.println("NULL");
+				}
+				if (createPieces(this.pieces, torrent)) {
 					System.out.println("File is already complete");
 					return;
 				}
@@ -319,16 +350,13 @@ public class RUBTClient {
 				for (int i=0; i<peers.size();i++){
 					
 					Thread thread = new Thread(new MessageHandler(pieces,
-							peers.get(i), activeTorrent.info_hash,
-							communicationTracker.getClientID(), activeTorrent, peers));
+							peers.get(i), torrent.info_hash,
+							communicationTracker.getClientID(), torrent, peers));
 					threadList.add(thread);
-					threadList.get(i).start();
 				}
-				
-				
-				GetWorstPeer test=new GetWorstPeer(peers);
-				Timer timer = new Timer();
-
+				for(Thread thread: threadList){
+					thread.start();
+				}
 				while (getPercentComplete(pieces) != 100) {
 					/*System.out.print("\rdownloading: " + getPercentComplete(pieces)
 							+ "%");
@@ -337,6 +365,7 @@ public class RUBTClient {
 					
 				}
 				for (Thread thread : threadList){
+					
 					thread.join();
 				}
 				System.out.print("\rdownloading: " + getPercentComplete(pieces) + "%");
