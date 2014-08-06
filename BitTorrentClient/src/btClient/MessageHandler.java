@@ -130,7 +130,7 @@ public class MessageHandler implements Runnable {
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
-					System.err.println("An error has encountered. Exiting...");
+					System.err.println(e.getMessage());
 					peer.decrementPeerCounters(pieces);
 					return;
 				}
@@ -177,10 +177,7 @@ public class MessageHandler implements Runnable {
 				try {
 					handleMessage(peer.getMessage());
 				} catch (IOException | BtException e) {
-					System.err.println("Fatal error.... disconnecting");
-					if (piece != null) {
-
-					}
+					System.err.println(e.getMessage());
 					peer.decrementPeerCounters(pieces);
 					return;
 				}
