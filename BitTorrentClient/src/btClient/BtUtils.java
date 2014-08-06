@@ -7,6 +7,11 @@
  */
 package btClient;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 /**
  * This class was written to provide utilities such as constants and commonly
  * called methods as a convience for developing the a BitTorrent client for the
@@ -131,4 +136,47 @@ public class BtUtils {
 	 * BitTorrent Protocol
 	 */
 	public static final int PIECE_HEADER_SIZE = 9;
+	/**
+	 * BitTorrent message offset for the index of a requested piece
+	 */
+	public static final int REQUEST_INDEX = 1;
+	/**
+	 * BitTorrent message offset for the offset of a requested block
+	 */
+	public static final int REQUEST_OFFSET = 5;
+	/**
+	 * BitTorrent message offset for the size of a requested block
+	 */
+	public static final int REQUEST_SIZE = 9;
+	
+	/**
+	 * Returns the byte array of a file to be used with Bencoder2.java. The byte
+	 * array format is required as input to the Bencoder2 class. Requires jre7
+	 * or greater.
+	 * 
+	 * 
+	 * @param file
+	 *            The file to be converted to a byte array
+	 * @return byte The torrent file represented as a byte array
+	 * @throws IOException
+	 */
+	public static byte[] getFileBytes(File torrentFile) throws IOException,
+			BencodingException {
+
+		// Make sure the file exists and it's not a directory
+		if (!torrentFile.exists() || torrentFile.isDirectory()) {
+			System.err.println("Couldn't load the torrent file.  "
+					+ "Exiting program.");
+			System.exit(1);
+		}
+
+		Path filePath = torrentFile.toPath();
+		byte[] torrentBytes = Files.readAllBytes(filePath);
+		if (torrentBytes == null) {
+			System.err.println("Torrent file is empty.  Exiting program.");
+			System.exit(1);
+		}
+		return torrentBytes;
+	}// END getFileBytes
 }
+

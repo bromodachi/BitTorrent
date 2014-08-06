@@ -11,6 +11,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class Peer {
 	private Socket connection;
 	private DataInputStream inputStream;
 	private DataOutputStream outputStream;
+	private boolean isDownloading=true; //set this to false as default later
 	/**
 	 * The number of bytes that this peer has downloaded from the client
 	 */
@@ -40,7 +42,7 @@ public class Peer {
 	/**
 	 * boolean array indicating whether or not this peer has each piece
 	 */
-	private boolean[] has_piece = null;
+	private boolean[] has_piece = new boolean[250];
 	/**
 	 * indicates whether or not this piece is choked
 	 */
@@ -112,8 +114,19 @@ public class Peer {
 	public boolean isChoked() {
 		return choked;
 	}
+	private static boolean [] bool;
+	public boolean [] getPeerBool(){
+		return bool;
+	}
+	public static void setBool(boolean [] b){
+		bool=b;
+	}
 
 	/* =============== Setters ================ */
+	
+	public void setIsDownloading(boolean setMe){
+		this.isDownloading=setMe;
+	}
 	public void setInterval(int interval) {
 		this.interval = interval;
 	}
@@ -167,6 +180,10 @@ public class Peer {
 	}
 
 	/* =============== GETTERS ============== */
+	
+	public boolean getIsDownloading(){
+		return isDownloading;
+	}
 	/**
 	 * Checks if a this peer has the piece indicated by the piece index
 	 * 
@@ -216,6 +233,18 @@ public class Peer {
 		outputStream.close();
 		connection.close();
 	}
+	
+	/**
+	 * Keep the connection alive
+	 */
+	public void keepAlive(){
+		try {
+			connection.setSoTimeout(BtUtils.MAX_TIME);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * Establishes a connection with the peer by creating a socket to the peer's
@@ -236,20 +265,15 @@ public class Peer {
 		inputStream = new DataInputStream(connection.getInputStream());
 		outputStream = new DataOutputStream(connection.getOutputStream());
 		connection.setSoTimeout(BtUtils.MAX_TIME);
-		ByteBuffer handshake = ByteBuffer.allocate(BtUtils.p2pHandshakeLength);
-		handshake.put(BtUtils.p2pHandshakeHeader);
+		
 		info_hash.rewind();
 		clientID.rewind();
-		while (info_hash.position() < info_hash.capacity()) {
-			handshake.put(info_hash.get());
-		}
-		while (clientID.position() < clientID.capacity()) {
-			handshake.put(clientID.get());
-		}
-
-		handshake.rewind();
-		byte[] bytes = new byte[BtUtils.p2pHandshakeLength];
-		handshake.get(bytes, 0, handshake.capacity());
+		byte[] b = new byte[info_hash.capacity()];
+		info_hash.get(b);
+		byte[] c = new byte[clientID.capacity()];
+		clientID.get(c);
+		
+		byte[] bytes = getHandShakeBytes(b,c);
 
 		outputStream.write(bytes);
 		outputStream.flush();
@@ -267,6 +291,39 @@ public class Peer {
 		return true;
 	}
 
+	public byte[] getHandShakeBytes(byte [] info_hash, byte[]  clientID)
+	{
+		int index=0;
+		byte[] handshake = new byte[BtUtils.p2pHandshakeLength];
+		try{
+			
+		System.arraycopy(BtUtils.p2pHandshakeHeader, 0, handshake, index, BtUtils.p2pHandshakeHeader.length);
+		System.out.println(BtUtils.p2pHandshakeHeader.length);
+		index+=BtUtils.p2pHandshakeHeader.length;
+		System.arraycopy(info_hash, 0, handshake, index, info_hash.length);
+		index+=info_hash.length;
+		
+		System.arraycopy(clientID, 0, handshake, index, clientID.length);
+		
+		}catch(IndexOutOfBoundsException  e){
+			//honestly, I don't think this will happen. Idk why keep this but
+			//I'm going to
+			System.out.println("Error");
+		}	
+		return handshake;
+
+}
+	
+	public synchronized void sendMeToTheRightSend(int i){
+		switch(i){
+			/*
+			 * SendKeep alive be 1
+			 * send choke be 2
+			 * send unchoke be 3
+			 * send interested */
+		}
+		
+	}
 	/**
 	 * Just verifies that the info hash are the same. If not, we should drop the
 	 * connection
@@ -502,6 +559,7 @@ public class Peer {
 			}
 			// don't need else, default value is false.
 		}
+		setBool(bool);
 		return bool;
 	}
 
@@ -528,10 +586,21 @@ public class Peer {
 	 *            An array list of {@link Piece} objects
 	 */
 	public void decrementPeerCounters(ArrayList<Piece> pieces) {
+		if(pieces == null){
+			return;
+		}
 		for (Piece piece : pieces) {
 			if (has_piece[piece.getIndex()]) {
 				piece.decrementPeerCount();
 			}
+		}
+	}
+	public synchronized void handleSendMessages(sendMessages message){
+		try {
+			message.sendMessage();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 }

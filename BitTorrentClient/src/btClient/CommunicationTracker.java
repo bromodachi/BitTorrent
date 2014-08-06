@@ -98,6 +98,10 @@ public class CommunicationTracker {
 		byte[] random_id = new byte[20];
 		Random random = new Random();
 		random.nextBytes(random_id);
+		random_id[0] = (byte)'C';
+		random_id[1] = (byte)'G';
+		random_id[2] = (byte)'C';
+		random_id[3] = (byte)'U';
 		return random_id;
 	}
 
@@ -151,7 +155,7 @@ public class CommunicationTracker {
 	 * 
 	 */
 	@SuppressWarnings("unchecked")
-	public void CommunicateWithTracker(String event) throws BtException {
+	public void CommunicateWithTracker(String event, int downloaded) throws BtException {
 		if (event.equals("completed")) {
 			this.event = "completed";
 			this.downloaded = torrentInfo.file_length;
@@ -165,6 +169,11 @@ public class CommunicationTracker {
 			this.event = "stopped";
 			this.downloaded = torrentInfo.file_length;
 			this.left = 0;
+		}
+		else if(event.equals(" ")){
+			this.event="";
+			this.downloaded=downloaded;
+			this.left=torrentInfo.file_length-downloaded;
 		}
 		HttpURLConnection connection = null;
 		/* get connection port. */
@@ -257,7 +266,10 @@ public class CommunicationTracker {
 				String ipS = new String(ip.array(), "ASCII");
 
 				Peer temp_peer = new Peer(ipS, peerID, peer_port);
+				System.out.println("Id: "+peerID+ " ip: "+ipS+ " peer port: "+peer_port);
+				if(ipS.equals("128.6.171.131") ||ipS.equals("128.6.171.130")){
 				peersList.add(temp_peer);
+				}
 			}
 		} catch (IOException e) {
 			System.err.println("Can't open the connection :c");

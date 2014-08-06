@@ -293,9 +293,7 @@ public class Piece {
 	/**
 	 * @see ReentrantLock#unlock()
 	 */
-	public void unlock() {
-		lock.unlock();
-	}
+	
 
 	/**
 	 * Computes SHA-1 hash for this piece
