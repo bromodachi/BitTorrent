@@ -89,9 +89,10 @@ public class MessageHandler implements Runnable {
 	public MessageHandler(ActiveTorrent activeTorrent, Peer peer) {
 		this.torrent = activeTorrent.getTorrentInfo();
 		this.pieces = activeTorrent.getPieces();
-		this.peer = peer;
+		
 		this.info_hash = torrent.info_hash;
 		this.clientID = activeTorrent.getClientId();
+		this.peer = peer;
 		choked = true;
 		wasted = 0;
 		// initialize peer has_piece array
@@ -127,6 +128,7 @@ public class MessageHandler implements Runnable {
 			updateHasPiece();
 			// debug();
 			if (!choked) {
+
 				// if piece is completed set it to null to get next piece
 				if (piece != null) {
 					if (piece.isComplete()) {
@@ -199,6 +201,7 @@ public class MessageHandler implements Runnable {
 				try {
 					peer.disconnect();
 					peer.closeEverything();
+					peer.setChoked(true);
 				} catch (IOException e1) {
 					return;
 				}
@@ -246,11 +249,13 @@ public class MessageHandler implements Runnable {
 			System.out.println(Thread.currentThread().getName()
 					+ " Received choke");
 			choked = true;
+			peer.setChoked(choked);
 			break;
 		case BtUtils.UNCHOKE_ID:
 			System.out.println(Thread.currentThread().getName()
 					+ " Received unchoke");
 			choked = false;
+			peer.setChoked(choked);
 			break;
 		case BtUtils.INTERESTED_ID:
 			System.out.println(Thread.currentThread().getName()
