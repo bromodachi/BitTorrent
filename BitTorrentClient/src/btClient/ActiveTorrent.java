@@ -5,12 +5,23 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Timer;
 
 import javax.swing.JProgressBar;
 
 import btClient.BtUtils.Status;
 
 public class ActiveTorrent implements Runnable {
+	private int unchoked_peers;
+	/**
+	 *  worstPeer extends timer to select a pere to choke and then pick
+	 *  a peer randomly to unchoke
+	 */
+	GetWorstPeer worstPeer;
+	/**
+	 * Timer for choke/unchoke algo
+	 */
+	private Timer timer;
 	/**
 	 * The {@link TorrentInfo} file that is associated with this
 	 * {@link ActiveTorrent}
@@ -56,9 +67,7 @@ public class ActiveTorrent implements Runnable {
 	/**
 	 * A string describing the status of this torrent
 	 */
-	private Status status;
-
-	private int unchoked_peers;
+	public static Status status;
 
 	/**
 	 * Creates a new ActiveTorrent Object for the given torrent file
@@ -72,6 +81,7 @@ public class ActiveTorrent implements Runnable {
 			throws FileNotFoundException {
 		super();
 		this.torrent = torrent;
+		unchoked_peers = 0;
 		this.communicationTracker = new CommunicationTracker(torrent);
 		this.file = file;
 		peers = new ArrayList<Peer>();
@@ -84,7 +94,6 @@ public class ActiveTorrent implements Runnable {
 		progressBar.setVisible(true);
 		gui_index = -1;
 		status = Status.Stopped;
-		unchoked_peers = 0;
 	}
 
 	public int getNumPieces() {
@@ -158,8 +167,9 @@ public class ActiveTorrent implements Runnable {
 		System.out.println("making threads");
 		// create a new MessageHandler and thread for each peer
 		int total = 0, connected = 0;
+		
 		for (Peer peer : peers) {
-			if (peer.getIP().equals("128.6.171.130")) {
+			if ( peer.getIP().equals("128.6.171.130")||peer.getIP().equals("128.6.171.131")) {
 				Thread thread = new Thread(new MessageHandler(this, peer));
 				threads.add(thread);
 				thread.start();
@@ -174,6 +184,11 @@ public class ActiveTorrent implements Runnable {
 
 		// indicate this torrent is active
 		System.out.println("starting main thread");
+		worstPeer=new GetWorstPeer(peers, this);
+		timer = new Timer();
+		timer.schedule(worstPeer, 30000, 30000);
+		status = Status.Active;
+		
 		/*
 		 * Thread thread = new Thread(this); thread.start();
 		 */
@@ -182,6 +197,7 @@ public class ActiveTorrent implements Runnable {
 	@Override
 	public void run() {
 		status = Status.Active;
+		
 		while (isActive()) {
 			progressBar.setValue(getPercentComplete());
 			if (checkCompleteness()) {
@@ -262,6 +278,35 @@ public class ActiveTorrent implements Runnable {
 		return true;
 	}
 
+	 
+ 	public ArrayList<Piece> getPieces() {
+ 		return pieces;
+ 	}
+ 
+ 	public TorrentInfo getTorrentInfo() {
+ 		return torrent;
+ 	}
+ 
+ 	public ByteBuffer getClientId() {
+ 		return communicationTracker.getClientID();
+ 	}
+ 
+ 	public synchronized int getUnchokedPeers() {
+ 		return unchoked_peers;
+ 	}
+ 
+ 	public synchronized void incrementUnchokedPeers() {
+ 		unchoked_peers++ ;
+ 	}
+ 
+ 	public synchronized void decrementUnchokedPeers() {
+ 		unchoked_peers--;
+ 	}
+ 
+ 	public synchronized void setUnchokedPeers(int unchoked_peers) {
+ 		this.unchoked_peers = unchoked_peers;
+ 	}
+ 	
 	public JProgressBar getProgressBar() {
 		return progressBar;
 	}
@@ -276,33 +321,5 @@ public class ActiveTorrent implements Runnable {
 
 	public Status getStatus() {
 		return status;
-	}
-
-	public ArrayList<Piece> getPieces() {
-		return pieces;
-	}
-
-	public TorrentInfo getTorrentInfo() {
-		return torrent;
-	}
-
-	public ByteBuffer getClientId() {
-		return communicationTracker.getClientID();
-	}
-
-	public synchronized int getUnchokedPeers() {
-		return unchoked_peers;
-	}
-
-	public synchronized void incrementUnchokedPeers() {
-		unchoked_peers++;
-	}
-
-	public synchronized void decrementUnchokedPeers() {
-		unchoked_peers--;
-	}
-
-	public synchronized void setUnchokedPeers(int unchoked_peers) {
-		this.unchoked_peers = unchoked_peers;
 	}
 }
