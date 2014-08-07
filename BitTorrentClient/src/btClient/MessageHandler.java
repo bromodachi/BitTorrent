@@ -86,14 +86,13 @@ public class MessageHandler implements Runnable {
 	 * @param {@link#clientID}
 	 * @param {@link#torr}
 	 */
-	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
-			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
-		this.pieces = pieces;
+	public MessageHandler(ActiveTorrent activeTorrent, Peer peer) {
+		this.torrent = activeTorrent.getTorrentInfo();
+		this.pieces = activeTorrent.getPieces();
 		this.peer = peer;
-		this.info_hash = info_hash;
-		this.clientID = clientID;
+		this.info_hash = torrent.info_hash;
+		this.clientID = activeTorrent.getClientId();
 		choked = true;
-		this.torrent = torr;
 		wasted = 0;
 		// initialize peer has_piece array
 		peer.setHasPieces(new boolean[pieces.size()]);

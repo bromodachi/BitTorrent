@@ -3,6 +3,7 @@ package btClient;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 import javax.swing.JProgressBar;
@@ -57,6 +58,8 @@ public class ActiveTorrent implements Runnable {
 	 */
 	private Status status;
 
+	private int unchoked_peers;
+
 	/**
 	 * Creates a new ActiveTorrent Object for the given torrent file
 	 * 
@@ -81,6 +84,7 @@ public class ActiveTorrent implements Runnable {
 		progressBar.setVisible(true);
 		gui_index = -1;
 		status = Status.Stopped;
+		unchoked_peers = 0;
 	}
 
 	public int getNumPieces() {
@@ -155,10 +159,8 @@ public class ActiveTorrent implements Runnable {
 		// create a new MessageHandler and thread for each peer
 		int total = 0, connected = 0;
 		for (Peer peer : peers) {
-			if ( peer.getIP().equals("128.6.171.130")) {
-				Thread thread = new Thread(new MessageHandler(pieces, peer,
-						torrent.info_hash, communicationTracker.getClientID(),
-						torrent));
+			if (peer.getIP().equals("128.6.171.130")) {
+				Thread thread = new Thread(new MessageHandler(this, peer));
 				threads.add(thread);
 				thread.start();
 				System.out.println("ADDED PEER " + peer.getPeer_id());
@@ -274,5 +276,33 @@ public class ActiveTorrent implements Runnable {
 
 	public Status getStatus() {
 		return status;
+	}
+
+	public ArrayList<Piece> getPieces() {
+		return pieces;
+	}
+
+	public TorrentInfo getTorrentInfo() {
+		return torrent;
+	}
+
+	public ByteBuffer getClientId() {
+		return communicationTracker.getClientID();
+	}
+
+	public synchronized int getUnchokedPeers() {
+		return unchoked_peers;
+	}
+
+	public synchronized void incrementUnchokedPeers() {
+		unchoked_peers++;
+	}
+
+	public synchronized void decrementUnchokedPeers() {
+		unchoked_peers--;
+	}
+
+	public synchronized void setUnchokedPeers(int unchoked_peers) {
+		this.unchoked_peers = unchoked_peers;
 	}
 }
