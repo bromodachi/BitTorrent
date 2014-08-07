@@ -7,15 +7,10 @@
  */
 package btClient;
 
-import java.io.BufferedReader;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Timer;
 
 /**
  * This is the main client class for CS352, BitTorrent project 1 The program is
@@ -26,12 +21,7 @@ import java.util.Timer;
  * @author Cody Goodman & Conrado Uraga
  *
  */
-public class RUBTClient {
-	static File file = null;
-	static ArrayList<Peer> peers = null;
-	static CommunicationTracker communicationTracker;
-	static boolean clientIsDownloading = false;
-	static ArrayList<Peer> chokers = new ArrayList<Peer>();//
+public class RUBTClient implements ActionListener {
 
 	/**
 	 * This is the main method that is called upon program startup, this method
@@ -47,13 +37,24 @@ public class RUBTClient {
 	 * @throws BencodingException
 	 * @throws InterruptedException
 	 */
-	public static void main(String[] args) throws IOException,
+	public static void main (String[] args) throws IOException,
 			BencodingException, InterruptedException {
+
+		// Step 1 - Take the command line arguments
 		if (!validateArgs(args)) {
 			return;
 		}
 		GUIFrame gui = new GUIFrame();
 		gui.run();
+		
+/*		try {
+			new ActiveTorrent(new TorrentInfo(BtUtils.getFileBytes(new File(args[0]))), new File(args[1])).start();
+		} catch (BtException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+
+		// temporary testing code
 
 	}// END MAIN
 
@@ -87,294 +88,9 @@ public class RUBTClient {
 		return true;
 	}// END validateArgs
 
-	/**
-	 * Returns the byte array of a file to be used with Bencoder2.java. The byte
-	 * array format is required as input to the Bencoder2 class. Requires jre7
-	 * or greater.
-	 * 
-	 * 
-	 * @param file
-	 *            The file to be converted to a byte array
-	 * @return byte The torrent file represented as a byte array
-	 * @throws IOException
-	 */
-	public static byte[] getFileBytes(String fileName) throws IOException,
-			BencodingException {
-
-		// Create a file with the first argument
-		File torrentFile = new File(fileName);
-
-		// Make sure the file exists and it's not a directory
-		if (!torrentFile.exists() || torrentFile.isDirectory()) {
-			System.err.println("Couldn't load the torrent file.  "
-					+ "Exiting program.");
-			System.exit(1);
-		}
-
-		Path filePath = torrentFile.toPath();
-		byte[] torrentBytes = Files.readAllBytes(filePath);
-		if (torrentBytes == null) {
-			System.err.println("Torrent file is empty.  Exiting program.");
-			System.exit(1);
-		}
-		return torrentBytes;
-	}// END getFileBytes
-
-	/**
-	 * Returns the specified peer for testing the RUBTClient
-	 * 
-	 * @param peers
-	 *            the list of availible peers
-	 * @return peer object for the test peer
-	 */
-	public static Peer getTestPeer(ArrayList<Peer> peers) {
-		for (Peer curr : peers) {
-			if (curr.getPeer_id().startsWith(BtUtils.RU_PEER_PREFIX_STRING)) {
-				return curr;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Adds a peer to list of chokers. This list will later be used to unchoke a
-	 * peer
-	 * 
-	 * @param p
-	 */
-	public static void listOfChokers(Peer p) {
-		chokers.add(p);
-	}
-
-	public static Peer getAChokePeer(int i) {
-		return chokers.get(i);
-
-	}
-
-	/**
-	 * Creates a new piece object for the total number of pieces in the file to
-	 * be downloaded and adds them to the pieces array list
-	 * 
-	 * @param pieces
-	 *            ArrayList of piece objects
-	 * @param activeTorrent
-	 *            TorrentInfo object for the active download
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	private static boolean createPieces(ArrayList<Piece> pieces,
-			TorrentInfo activeTorrent) throws FileNotFoundException {
-		int leftover = activeTorrent.file_length % activeTorrent.piece_length;
-
-		for (int i = 0; i < activeTorrent.piece_hashes.length; i++) {
-			if (i == (activeTorrent.piece_hashes.length - 1)) {
-				pieces.add(new Piece(i, leftover, i
-						* activeTorrent.piece_length, file,
-						activeTorrent.piece_hashes[i].array()));
-			} else {
-				pieces.add(new Piece(i, activeTorrent.piece_length, i
-						* activeTorrent.piece_length, file,
-						activeTorrent.piece_hashes[i].array()));
-			}
-		}
-		return checkCompleteness(pieces);
-	}
-
-	/**
-	 * Checks the completeness of the file by calling {@link Piece#isComplete()}
-	 * for each {@link Piece}
-	 * 
-	 * @param pieces
-	 *            ArrayList of pieces that make up the file
-	 * @return True if all pieces are complete, otherwise false
-	 */
-	public static boolean checkCompleteness(ArrayList<Piece> pieces) {
-		for (Piece piece : pieces) {
-			if (!piece.isComplete()) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * Computes the percentage of the file that has been downloaded at a certain
-	 * moment of time
-	 * 
-	 * @param pieces
-	 *            ArrayList of all the piece objects for a file
-	 * @return int percent download complete
-	 */
-	private static int getPercentComplete(ArrayList<Piece> pieces) {
-		int completed = 0;
-		for (Piece curr : pieces) {
-			if (curr.isComplete()) {
-				completed++;
-			}
-		}
-		return (int) (((float) completed / (float) pieces.size()) * 100);
-	}
-
-	public static class RUBTClientThread implements Runnable {
-		// private boolean start=false;
-		public boolean end = false;
-		Worker w;
-		private boolean start = false;
-		String[] arg;
-		byte[] torrentBytes;
-		File file;
-		TorrentInfo info;
-
-		public void setStart(boolean b) {
-			this.start = b;
-		}
-
-		public RUBTClientThread(TorrentInfo info, File file) {
-			this.info = info;
-			this.file = file;
-		}
-
-		@Override
-		public void run() {
-			if (start) {
-				w = new Worker(info, file);
-				try {
-					w.initStart();
-					;
-				} catch (IOException | BencodingException
-						| InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-
-			while (true) {
-
-				if (end) {
-					try {
-						communicationTracker.CommunicateWithTracker("stopped",
-								(int) file.length());
-						break;
-					} catch (BtException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					break;
-				}
-			}
-
-		}
-
-		public String getFileName() {
-			return file.getName();
-		}
-	}
-
-	public static class Worker {
-		String[] args;
-		TorrentInfo torrent;
-		File file;
-		ArrayList<Piece> pieces;
-		ArrayList<Peer> peers = null;
-		CommunicationTracker communicationTracker;
-		ArrayList<Peer> chokers = new ArrayList<Peer>();
-
-		public Worker(TorrentInfo torrentInfo, File file) {
-
-			this.torrent = torrentInfo;
-			this.file = file;
-			this.pieces = new ArrayList<Piece>();
-		}
-
-		private boolean createPieces(ArrayList<Piece> pieces,
-				TorrentInfo activeTorrent) throws FileNotFoundException {
-			int leftover = activeTorrent.file_length
-					% activeTorrent.piece_length;
-
-			for (int i = 0; i < activeTorrent.piece_hashes.length; i++) {
-				if (i == (activeTorrent.piece_hashes.length - 1)) {
-					pieces.add(new Piece(i, leftover, i
-							* activeTorrent.piece_length, file,
-							activeTorrent.piece_hashes[i].array()));
-				} else {
-					pieces.add(new Piece(i, activeTorrent.piece_length, i
-							* activeTorrent.piece_length, file,
-							activeTorrent.piece_hashes[i].array()));
-				}
-			}
-			return checkCompleteness(pieces);
-		}
-
-		public void initStart() throws IOException, BencodingException,
-				InterruptedException {
-
-			// Step 3 - Send an HTTP GET request to the tracker
-			communicationTracker = new CommunicationTracker(torrent);
-			try {
-				communicationTracker.CommunicateWithTracker("started",
-						(int) file.length());
-			} catch (BtException e) {
-				e.printStackTrace();
-				System.err.println("Failed to send started message");
-				return;
-			}
-			// Any errors in the communication tracker, we shouldn't proceed.
-			if (torrent == null) {
-				System.out.println("NULL");
-			}
-			if (pieces == null) {
-				System.out.println("NULL");
-			}
-			if (createPieces(this.pieces, torrent)) {
-				System.out.println("File is already complete");
-				return;
-			}
-			// Step 4 - Connect with the Peer.
-			// Create new message handler and give it its own thread to run in
-			peers = communicationTracker.getPeersList();
-			ArrayList<Thread> threadList = new ArrayList<Thread>(peers.size());
-			clientIsDownloading = true;
-			for (int i = 0; i < peers.size(); i++) {
-
-				Thread thread = new Thread(new MessageHandler(pieces,
-						peers.get(i), communicationTracker.getClientID(),
-						torrent, peers));
-				threadList.add(thread);
-			}
-			for (Thread thread : threadList) {
-				thread.start();
-			}
-			while (getPercentComplete(pieces) != 100) {
-				/*
-				 * System.out.print("\rdownloading: " +
-				 * getPercentComplete(pieces) + "%"); Thread.sleep(1000);
-				 */
-				// timer.scheduleAtFixedRate(test, 30000, 30000);
-
-			}
-			for (Thread thread : threadList) {
-
-				thread.join();
-			}
-			System.out.print("\rdownloading: " + getPercentComplete(pieces)
-					+ "%");
-			System.out.println();
-			// Check download for completeness
-			for (Piece curr : pieces) {
-				if (!curr.isComplete()) {
-					System.err
-							.println("Disconnected before downloading all pieces");
-					return;
-				}
-			}
-			try {
-				communicationTracker.CommunicateWithTracker("completed",
-						(int) file.length());
-
-			} catch (BtException e) {
-				e.printStackTrace();
-				System.err.println("Failed to send completed/stopped");
-			}
-			System.out.println("Download successful");
-		}
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
 }

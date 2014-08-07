@@ -27,21 +27,13 @@ import java.awt.Dimension;
 
 import javax.swing.JScrollPane;
 
-import btClient.RUBTClient.RUBTClientThread;
-import btClient.RUBTClient.Worker;
-
 @SuppressWarnings("serial")
 public class GUIFrame extends JFrame implements ActionListener, Runnable {
 	private ArrayList<ActiveTorrent> torrents;
 	private GUIFrame frame = this;
 	private JTable torrentTable;
 
-	
 	public GUIFrame() {
-		setupFrame();
-	}
-	
-	private void setupFrame(){
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setMinimumSize(new Dimension(400, 300));
 		setPreferredSize(new Dimension(600, 800));
@@ -113,6 +105,7 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		this.requestFocus();
 
 		while (true) {
+			updateStatus();
 			validate();
 			try {
 				Thread.sleep(100);
@@ -182,12 +175,14 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		} else {
 			return;
 		}
-		ActiveTorrent torrent=new ActiveTorrent(new TorrentInfo(BtUtils.getFileBytes(torrentInfo)), file);
+		ActiveTorrent torrent = new ActiveTorrent(new TorrentInfo(BtUtils.getFileBytes(torrentInfo)), file);
 		torrents.add(torrent);
 		Object [] row = new Object [3];
 		row[0] = (Object)file.getName();
+		row[1] = (Object)torrent.getProgressBar();
+		row[2] = (Object)torrent.getStatus().toString();
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
-		
+		torrent.setGuiIndex(model.getRowCount());
 		model.addRow(row);
 		
 	}
@@ -208,11 +203,8 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 
 	private void startTorrent() throws IOException, BtException {
 		int row = torrentTable.getSelectedRow();
-		TableModel model = torrentTable.getModel();
-		String fileName = (String) model.getValueAt(row, 0);
 		for(ActiveTorrent torrent : torrents){
-			if(fileName.equals(torrent.getFileName())){
-				
+			if(torrent.getGuiIndex() == row){
 				torrent.start();
 				break;
 			}
@@ -221,13 +213,19 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 
 	private void stopTorrent() throws InterruptedException, BtException {
 		int row = torrentTable.getSelectedRow();
-		TableModel model = torrentTable.getModel();
-		String fileName = (String) model.getValueAt(row, 0);
+		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		for(ActiveTorrent torrent : torrents){
-			if(fileName.equals(torrent.getFileName())){
+			if(torrent.getGuiIndex() == row){
 				torrent.stop();
 				break;
 			}
+		}
+	}
+	
+	private void updateStatus(){
+		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
+		for(ActiveTorrent torrent : torrents){
+			model.setValueAt((Object)torrent.getStatus().toString(), torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_STATUS_COLUMN);
 		}
 	}
 }

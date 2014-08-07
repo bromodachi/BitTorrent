@@ -7,6 +7,8 @@ import java.util.ArrayList;
 
 import javax.swing.JProgressBar;
 
+import btClient.BtUtils.Status;
+
 public class ActiveTorrent implements Runnable {
 	/**
 	 * The {@link TorrentInfo} file that is associated with this
@@ -42,9 +44,18 @@ public class ActiveTorrent implements Runnable {
 	 */
 	private boolean active;
 	/**
-	 * A Progress bar indicating the percentage of the file that has been downloaded
+	 * A Progress bar indicating the percentage of the file that has been
+	 * downloaded
 	 */
 	private JProgressBar progressBar;
+	/**
+	 * The row number that corresponds to this torrent in the GUI table
+	 */
+	private int gui_index;
+	/**
+	 * A string describing the status of this torrent
+	 */
+	private Status status;
 
 	/**
 	 * Creates a new ActiveTorrent Object for the given torrent file
@@ -68,6 +79,8 @@ public class ActiveTorrent implements Runnable {
 		progressBar.setStringPainted(true);
 		progressBar.setValue(getPercentComplete());
 		progressBar.setVisible(true);
+		gui_index = -1;
+		status = Status.Stopped;
 	}
 
 	public int getNumPieces() {
@@ -88,8 +101,8 @@ public class ActiveTorrent implements Runnable {
 		}
 		return active;
 	}
-	
-	public String getFileName(){
+
+	public String getFileName() {
 		return file.getName();
 	}
 
@@ -133,32 +146,52 @@ public class ActiveTorrent implements Runnable {
 				throw new BtException("Failed to create file");
 			}
 		}
+		System.out.println("Communicating with tracker");
 		// Send tracker started message
-		communicationTracker.CommunicateWithTracker("Started",
+		communicationTracker.CommunicateWithTracker("started",
 				getBytesCompleted());
 		peers = communicationTracker.getPeersList();
+		System.out.println("making threads");
 		// create a new MessageHandler and thread for each peer
+		int total = 0, connected = 0;
 		for (Peer peer : peers) {
-				Thread thread = new Thread(new MessageHandler(pieces, peer, communicationTracker.getClientID(), torrent, peers));
+			if ( peer.getIP().equals("128.6.171.130")) {
+				Thread thread = new Thread(new MessageHandler(pieces, peer,
+						torrent.info_hash, communicationTracker.getClientID(),
+						torrent));
 				threads.add(thread);
 				thread.start();
 				System.out.println("ADDED PEER " + peer.getPeer_id());
-
+				connected++;
+			}
+			total++;
 		}
+		System.err.println("Total: " + total + " connected: " + connected);
 
 		// create listener for connecting peers
 
 		// indicate this torrent is active
-		active = true;
-		
-		Thread thread = new Thread(this);
-		thread.start();
+		System.out.println("starting main thread");
+		/*
+		 * Thread thread = new Thread(this); thread.start();
+		 */
 	}
-	
+
 	@Override
 	public void run() {
-		while(active){
+		status = Status.Active;
+		while (isActive()) {
 			progressBar.setValue(getPercentComplete());
+			if (checkCompleteness()) {
+				status = Status.Seeding;
+			} else {
+				status = Status.Active;
+			}
+		}
+		if (checkCompleteness()) {
+			status = Status.Complete;
+		} else {
+			status = Status.Stopped;
 		}
 	}
 
@@ -170,14 +203,13 @@ public class ActiveTorrent implements Runnable {
 				e.printStackTrace();
 			}
 		}
-		for(Thread thread : threads){
+		for (Thread thread : threads) {
 			thread.join();
 		}
+		threads.clear();
 
 		communicationTracker.CommunicateWithTracker("stopped",
 				getBytesCompleted());
-		
-		active = false;
 	}
 
 	/**
@@ -230,5 +262,17 @@ public class ActiveTorrent implements Runnable {
 
 	public JProgressBar getProgressBar() {
 		return progressBar;
+	}
+
+	public int getGuiIndex() {
+		return gui_index;
+	}
+
+	public void setGuiIndex(int gui_index) {
+		this.gui_index = gui_index;
+	}
+
+	public Status getStatus() {
+		return status;
 	}
 }

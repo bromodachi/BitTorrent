@@ -148,6 +148,18 @@ public class BtUtils {
 	 * BitTorrent message offset for the size of a requested block
 	 */
 	public static final int REQUEST_SIZE = 9;
+	/**
+	 * The index of the status column in the torrent table for the GUI
+	 */
+	public static final int TORRENT_TABLE_STATUS_COLUMN = 2;
+	/**
+	 * Number of bytes in an integer
+	 */
+	public static final int SIZE_OF_INT = 4;
+	
+	public static enum Status {
+		Active, Seeding, Stopped, Starting, Complete
+	}
 	
 	/**
 	 * Returns the byte array of a file to be used with Bencoder2.java. The byte
@@ -169,7 +181,6 @@ public class BtUtils {
 					+ "Exiting program.");
 			System.exit(1);
 		}
-
 		Path filePath = torrentFile.toPath();
 		byte[] torrentBytes = Files.readAllBytes(filePath);
 		if (torrentBytes == null) {
@@ -179,4 +190,3 @@ public class BtUtils {
 		return torrentBytes;
 	}// END getFileBytes
 }
-

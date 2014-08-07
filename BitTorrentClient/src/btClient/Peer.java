@@ -11,10 +11,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.BitSet;
 
 /**
  * This class is tasked with managing the connection with a peer and sending
@@ -30,7 +30,6 @@ public class Peer {
 	private Socket connection;
 	private DataInputStream inputStream;
 	private DataOutputStream outputStream;
-	private boolean isDownloading=true; //set this to false as default later
 	/**
 	 * The number of bytes that this peer has downloaded from the client
 	 */
@@ -42,12 +41,23 @@ public class Peer {
 	/**
 	 * boolean array indicating whether or not this peer has each piece
 	 */
-	private boolean[] has_piece = new boolean[250];
+	private boolean[] has_piece = null;
 	/**
 	 * indicates whether or not this piece is choked
 	 */
 	private boolean choked;
+	/**
+	 * indicates whether or not this peer is interested in pieces that we have
+	 */
+	private boolean interested;
 
+	/**
+	 * Creats a new Peer object with the given parameters
+	 * 
+	 * @param {@link#IP}
+	 * @param {@link#peer_id}
+	 * @param {@link#port}
+	 */
 	public Peer(String IP, String peer_id, int port) {
 		this.IP = IP;
 		this.peer_id = peer_id;
@@ -56,6 +66,7 @@ public class Peer {
 		uploaded = 0;
 		downloaded = 0;
 		choked = true;
+		interested = false;
 
 	}
 
@@ -114,19 +125,16 @@ public class Peer {
 	public boolean isChoked() {
 		return choked;
 	}
-	private static boolean [] bool;
-	public boolean [] getPeerBool(){
-		return bool;
+
+	public boolean isClosed() {
+		return connection.isClosed();
 	}
-	public static void setBool(boolean [] b){
-		bool=b;
+	
+	public boolean isInterested(){
+		return interested;
 	}
 
 	/* =============== Setters ================ */
-	
-	public void setIsDownloading(boolean setMe){
-		this.isDownloading=setMe;
-	}
 	public void setInterval(int interval) {
 		this.interval = interval;
 	}
@@ -154,6 +162,10 @@ public class Peer {
 	public void setUploaded(int uploaded) {
 		this.uploaded = uploaded;
 	}
+	
+	public void setInterested(boolean interested){
+		this.interested = interested;
+	}
 
 	/**
 	 * Adds the given number of uploaded bytes to the uploaded counter
@@ -180,10 +192,6 @@ public class Peer {
 	}
 
 	/* =============== GETTERS ============== */
-	
-	public boolean getIsDownloading(){
-		return isDownloading;
-	}
 	/**
 	 * Checks if a this peer has the piece indicated by the piece index
 	 * 
@@ -233,18 +241,6 @@ public class Peer {
 		outputStream.close();
 		connection.close();
 	}
-	
-	/**
-	 * Keep the connection alive
-	 */
-	public void keepAlive(){
-		try {
-			connection.setSoTimeout(BtUtils.MAX_TIME);
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
 
 	/**
 	 * Establishes a connection with the peer by creating a socket to the peer's
@@ -264,23 +260,20 @@ public class Peer {
 		connection = new Socket(IP, port);
 		inputStream = new DataInputStream(connection.getInputStream());
 		outputStream = new DataOutputStream(connection.getOutputStream());
-		connection.setSoTimeout(BtUtils.MAX_TIME);
+		//connection.setSoTimeout(BtUtils.MAX_TIME);
 		
-		info_hash.rewind();
-		clientID.rewind();
-		byte[] b = new byte[info_hash.capacity()];
-		info_hash.get(b);
-		byte[] c = new byte[clientID.capacity()];
-		clientID.get(c);
-		
-		byte[] bytes = getHandShakeBytes(b,c);
+		ByteBuffer handshake = ByteBuffer.wrap(new byte[BtUtils.p2pHandshakeLength + info_hash.array().length + clientID.array().length]);
+		handshake.put(BtUtils.p2pHandshakeHeader);
+		handshake.put(info_hash.array());
+		handshake.put(clientID.array());
 
-		outputStream.write(bytes);
+		outputStream.write(handshake.array());
 		outputStream.flush();
 		/* get the response */
 		byte[] response = new byte[BtUtils.p2pHandshakeLength];
 		inputStream.read(response);
 		/* verify that it's the same info_hash */
+		// connection.setKeepAlive(true);
 
 		if (!isSameHash(info_hash.array(), response)) {
 			closeEverything();
@@ -290,40 +283,11 @@ public class Peer {
 		}
 		return true;
 	}
-
-	public byte[] getHandShakeBytes(byte [] info_hash, byte[]  clientID)
-	{
-		int index=0;
-		byte[] handshake = new byte[BtUtils.p2pHandshakeLength];
-		try{
-			
-		System.arraycopy(BtUtils.p2pHandshakeHeader, 0, handshake, index, BtUtils.p2pHandshakeHeader.length);
-		System.out.println(BtUtils.p2pHandshakeHeader.length);
-		index+=BtUtils.p2pHandshakeHeader.length;
-		System.arraycopy(info_hash, 0, handshake, index, info_hash.length);
-		index+=info_hash.length;
-		
-		System.arraycopy(clientID, 0, handshake, index, clientID.length);
-		
-		}catch(IndexOutOfBoundsException  e){
-			//honestly, I don't think this will happen. Idk why keep this but
-			//I'm going to
-			System.out.println("Error");
-		}	
-		return handshake;
-
-}
 	
-	public synchronized void sendMeToTheRightSend(int i){
-		switch(i){
-			/*
-			 * SendKeep alive be 1
-			 * send choke be 2
-			 * send unchoke be 3
-			 * send interested */
-		}
+	public void reconnect(){
 		
 	}
+
 	/**
 	 * Just verifies that the info hash are the same. If not, we should drop the
 	 * connection
@@ -418,7 +382,7 @@ public class Peer {
 	 *            zero based index of the piece referenced in the have message
 	 * @throws IOException
 	 */
-	public void sendHave(int index) throws IOException {
+	public void sendHave(int index) throws IOException   {
 		byte[] bytes = new byte[BtUtils.HAVE_LENGTH_PREFIX
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
@@ -449,6 +413,7 @@ public class Peer {
 		message.putInt(index);
 		message.putInt(block_offset);
 		message.putInt(block_length);
+		connection.setSoTimeout(60000);
 		outputStream.write(message.array());
 	}
 
@@ -482,19 +447,17 @@ public class Peer {
 	 *            the size of the block to send to the peer
 	 * @throws IOException
 	 */
-	public void sendPiece(Piece piece, int offset, int size) throws IOException {
-		int payloadLength = 0; // need to figure out code for adding payload
-		byte[] bytes = new byte[BtUtils.PIECE_LENGTH_PREFIX
-				+ BtUtils.PREFIX_LENGTH + payloadLength];
+	public void sendPiece(Piece piece, int offset, int payload_size) throws IOException {
+		byte[] bytes = new byte[BtUtils.SIZE_OF_INT + BtUtils.PIECE_HEADER_SIZE + payload_size];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
-		message.putInt(BtUtils.PIECE_LENGTH_PREFIX);
+		message.putInt(BtUtils.PIECE_HEADER_SIZE + payload_size);
 		message.put((BtUtils.PIECE_ID));
 		message.putInt(piece.getIndex());
 		message.putInt(offset);
-		message.put(piece.getBytes(offset, size));
+		message.put(piece.getBytes(offset, payload_size));
 		outputStream.write(message.array());
 		outputStream.flush();
-		downloaded += size;
+		downloaded += payload_size;
 	}
 
 	/**
@@ -504,11 +467,14 @@ public class Peer {
 	 *         of byte representing the length_prefix. Otherwise returns the
 	 *         message (without its length prefix, message_id is in index = 0)
 	 * @throws IOException
+	 * @throws InterruptedException
 	 */
-	public byte[] getMessage() throws IOException {
+	public byte[] getMessage() throws IOException, InterruptedException {
+		connection.setSoTimeout(120000);
 		int length = inputStream.readInt();
 		byte[] message = new byte[length];
 		inputStream.readFully(message, 0, length);
+		connection.setSoTimeout(0);
 		return message;
 	}
 
@@ -559,7 +525,6 @@ public class Peer {
 			}
 			// don't need else, default value is false.
 		}
-		setBool(bool);
 		return bool;
 	}
 
@@ -586,7 +551,7 @@ public class Peer {
 	 *            An array list of {@link Piece} objects
 	 */
 	public void decrementPeerCounters(ArrayList<Piece> pieces) {
-		if(pieces == null){
+		if (pieces == null) {
 			return;
 		}
 		for (Piece piece : pieces) {
@@ -595,12 +560,29 @@ public class Peer {
 			}
 		}
 	}
-	public synchronized void handleSendMessages(sendMessages message){
-		try {
-			message.sendMessage();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+
+	/**
+	 * Converts a given boolean array into a bitfield and sends the bitfield to
+	 * the connected peer
+	 * 
+	 * @param has_piece
+	 *            boolean array to send as a bitfield
+	 * @throws IOException
+	 */
+	public void sendBitfield(boolean[] has_piece) throws IOException {
+		BitSet bitset = new BitSet(has_piece.length);
+		bitset.clear();
+		for (int i = 0; i < has_piece.length; i++) {
+			if (has_piece[i]) {
+				bitset.set(i);
+			}
 		}
+		byte[] bitfield = bitset.toByteArray();
+		ByteBuffer message = ByteBuffer.wrap(new byte[BtUtils.PREFIX_LENGTH
+				+ bitfield.length]);
+		message.put(BtUtils.BITFIELD_ID);
+		message.put(bitfield);
+		outputStream.write(message.array());
+		outputStream.flush();
 	}
 }

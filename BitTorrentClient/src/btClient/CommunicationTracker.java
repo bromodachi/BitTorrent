@@ -192,8 +192,10 @@ public class CommunicationTracker {
 							"ISO-8859-1")) + "&peer_id="
 					+ escape(new String(clientID.array())) + "&port="
 					+ connectPort + "&uploaded=" + uploaded + "&downloaded="
-					+ this.downloaded + "&left=" + this.left + "&event="
+					+ this.downloaded + "&left=" + this.left  + "&event="
 					+ this.event;
+			System.err.println(fullUrl);
+			System.err.println(event);
 		} catch (UnsupportedEncodingException e2) {
 			throw new BtException(e2.getMessage());
 		}
@@ -253,6 +255,8 @@ public class CommunicationTracker {
 				throw new BtException("Peers were not extracted");
 			}
 			peersList = new ArrayList<Peer>(peers.size());
+			System.err.println("Communication tracker got peer list of size: " + peers.size());
+			int counter = 0;
 			for (Map<ByteBuffer, Object> temp : peers) {
 				ByteBuffer peer_id2 = (ByteBuffer) temp
 						.get(ByteBuffer.wrap(new byte[] { 'p', 'e', 'e', 'r',
@@ -267,10 +271,10 @@ public class CommunicationTracker {
 
 				Peer temp_peer = new Peer(ipS, peerID, peer_port);
 				System.out.println("Id: "+peerID+ " ip: "+ipS+ " peer port: "+peer_port);
-				if(ipS.equals("128.6.171.131") ||ipS.equals("128.6.171.130")){
 				peersList.add(temp_peer);
-				}
+				counter++;
 			}
+			System.err.println("Created peers " + counter);
 		} catch (IOException e) {
 			System.err.println("Can't open the connection :c");
 			throw new BtException("Could not open connection");

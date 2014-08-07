@@ -17,7 +17,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * This class is tasked with managing a single piece of the downloaded file.
@@ -50,10 +49,6 @@ public class Piece {
 	 * The file where the downloaded data is to be saved
 	 */
 	private final RandomAccessFile file;
-	/**
-	 * Lock for this piece
-	 */
-	private final ReentrantLock lock;
 	/**
 	 * An array list of {@link Block} objects associated with this piece
 	 */
@@ -119,7 +114,6 @@ public class Piece {
 
 		peerCount = 0;
 
-		lock = new ReentrantLock();
 		// Check if piece is already completed in file
 		if (file.length() >= (offset + size)) {
 			if (checkHash()) {
@@ -202,6 +196,7 @@ public class Piece {
 	 * 
 	 * @return the next {@link#Block} to be downloaded, null if no block is
 	 *         available
+	 * @throws BtException
 	 */
 	public Block getNextBlock() {
 		for (Block block : blocks) {
@@ -219,14 +214,6 @@ public class Piece {
 	 */
 	public int getPeerCount() {
 		return peerCount;
-	}
-
-	/**
-	 * @see ReentrantLock#isLocked()
-	 * @return True if Piece is locked by any thread, otherwise false
-	 */
-	public boolean isLocked() {
-		return lock.isLocked();
 	}
 
 	/* ======================= SETTERS ======================= */
@@ -253,7 +240,7 @@ public class Piece {
 		complete = true;
 	}
 
-	private void setHash(byte[] hash) {
+	public void setHash(byte[] hash) {
 		this.hash = hash;
 	}
 
@@ -282,18 +269,6 @@ public class Piece {
 	}
 
 	/* =========== METHODS ========= */
-	/**
-	 * @see ReentrantLock#tryLock()
-	 * @return True if lock is acquired otherwise false
-	 */
-	public boolean tryLock() {
-		return lock.tryLock();
-	}
-
-	/**
-	 * @see ReentrantLock#unlock()
-	 */
-	
 
 	/**
 	 * Computes SHA-1 hash for this piece
@@ -362,9 +337,6 @@ public class Piece {
 		block.setDownloaded();
 		checkComplete();
 		// create hash if complete
-		if (complete) {
-			setHash(computeHash());
-		}
 	}
 
 	public boolean checkHash() {
@@ -416,7 +388,8 @@ public class Piece {
 	 */
 	public byte[] getBytes(int offset, int size) throws IOException {
 		byte[] bytes = new byte[size];
-		file.read(bytes, offset + this.offset, size);
+		file.seek(this.offset + offset);
+		file.read(bytes);
 		return bytes;
 	}
 }
