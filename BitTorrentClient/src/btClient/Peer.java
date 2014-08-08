@@ -129,8 +129,8 @@ public class Peer {
 	public boolean isClosed() {
 		return connection.isClosed();
 	}
-	
-	public boolean isInterested(){
+
+	public boolean isInterested() {
 		return interested;
 	}
 
@@ -162,8 +162,8 @@ public class Peer {
 	public void setUploaded(int uploaded) {
 		this.uploaded = uploaded;
 	}
-	
-	public void setInterested(boolean interested){
+
+	public void setInterested(boolean interested) {
 		this.interested = interested;
 	}
 
@@ -260,9 +260,11 @@ public class Peer {
 		connection = new Socket(IP, port);
 		inputStream = new DataInputStream(connection.getInputStream());
 		outputStream = new DataOutputStream(connection.getOutputStream());
-		//connection.setSoTimeout(BtUtils.MAX_TIME);
-		
-		ByteBuffer handshake = ByteBuffer.wrap(new byte[BtUtils.p2pHandshakeLength + info_hash.array().length + clientID.array().length]);
+		// connection.setSoTimeout(BtUtils.MAX_TIME);
+
+		ByteBuffer handshake = ByteBuffer
+				.wrap(new byte[BtUtils.p2pHandshakeLength
+						+ info_hash.array().length + clientID.array().length]);
 		handshake.put(BtUtils.p2pHandshakeHeader);
 		handshake.put(info_hash.array());
 		handshake.put(clientID.array());
@@ -283,9 +285,9 @@ public class Peer {
 		}
 		return true;
 	}
-	
-	public void reconnect(){
-		
+
+	public void reconnect() {
+
 	}
 
 	/**
@@ -314,7 +316,9 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public void sendKeepAlive() throws IOException {
-		outputStream.write(BtUtils.KEEP_ALIVE);
+		synchronized (outputStream) {
+			outputStream.write(BtUtils.KEEP_ALIVE);
+		}
 	}
 
 	/**
@@ -328,8 +332,10 @@ public class Peer {
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.CHOKE_LENGTH_PREFIX);
 		message.put((BtUtils.CHOKE_ID));
-		outputStream.write(message.array());
-		outputStream.flush();
+		synchronized (outputStream) {
+			outputStream.write(message.array());
+			outputStream.flush();
+		}
 	}
 
 	/**
@@ -343,8 +349,10 @@ public class Peer {
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.UNCHOKE_LENGTH_PREFIX);
 		message.put((BtUtils.UNCHOKE_ID));
-		outputStream.write(message.array());
-		outputStream.flush();
+		synchronized (outputStream) {
+			outputStream.write(message.array());
+			outputStream.flush();
+		}
 	}
 
 	/**
@@ -358,7 +366,9 @@ public class Peer {
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.INTERESTED_LENGTH_PREFIX);
 		message.put((BtUtils.INTERESTED_ID));
-		outputStream.write(message.array());
+		synchronized (outputStream) {
+			outputStream.write(message.array());
+		}
 	}
 
 	/**
@@ -372,7 +382,9 @@ public class Peer {
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.UNINTERESTED_LENGTH_PREFIX);
 		message.put((BtUtils.UNINTERESTED_ID));
-		outputStream.write(message.array());
+		synchronized (outputStream) {
+			outputStream.write(message.array());
+		}
 	}
 
 	/**
@@ -382,14 +394,16 @@ public class Peer {
 	 *            zero based index of the piece referenced in the have message
 	 * @throws IOException
 	 */
-	public void sendHave(int index) throws IOException   {
+	public void sendHave(int index) throws IOException {
 		byte[] bytes = new byte[BtUtils.HAVE_LENGTH_PREFIX
 				+ BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.HAVE_LENGTH_PREFIX);
 		message.put((BtUtils.HAVE_ID));
 		message.putInt(index);
-		outputStream.write(message.array());
+		synchronized (outputStream) {
+			outputStream.write(message.array());
+		}
 	}
 
 	/**
@@ -413,8 +427,10 @@ public class Peer {
 		message.putInt(index);
 		message.putInt(block_offset);
 		message.putInt(block_length);
-		connection.setSoTimeout(60000);
-		outputStream.write(message.array());
+		synchronized (outputStream) {
+			connection.setSoTimeout(60000);
+			outputStream.write(message.array());
+		}
 	}
 
 	/**
@@ -433,7 +449,9 @@ public class Peer {
 		message.putInt(block.getPieceIndex());
 		message.putInt(block.getOffset());
 		message.putInt(block.getSize());
-		outputStream.write(message.array());
+		synchronized (outputStream) {
+			outputStream.write(message.array());
+		}
 	}
 
 	/**
@@ -447,16 +465,20 @@ public class Peer {
 	 *            the size of the block to send to the peer
 	 * @throws IOException
 	 */
-	public void sendPiece(Piece piece, int offset, int payload_size) throws IOException {
-		byte[] bytes = new byte[BtUtils.SIZE_OF_INT + BtUtils.PIECE_HEADER_SIZE + payload_size];
+	public void sendPiece(Piece piece, int offset, int payload_size)
+			throws IOException {
+		byte[] bytes = new byte[BtUtils.SIZE_OF_INT + BtUtils.PIECE_HEADER_SIZE
+				+ payload_size];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.PIECE_HEADER_SIZE + payload_size);
 		message.put((BtUtils.PIECE_ID));
 		message.putInt(piece.getIndex());
 		message.putInt(offset);
 		message.put(piece.getBytes(offset, payload_size));
-		outputStream.write(message.array());
-		outputStream.flush();
+		synchronized (outputStream) {
+			outputStream.write(message.array());
+			outputStream.flush();
+		}
 		downloaded += payload_size;
 	}
 
@@ -469,7 +491,7 @@ public class Peer {
 	 * @throws IOException
 	 * @throws InterruptedException
 	 */
-	public byte[] getMessage() throws IOException, InterruptedException {
+	public synchronized byte[] getMessage() throws IOException, InterruptedException {
 		connection.setSoTimeout(120000);
 		int length = inputStream.readInt();
 		byte[] message = new byte[length];

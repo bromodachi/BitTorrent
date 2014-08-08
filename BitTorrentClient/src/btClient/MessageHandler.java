@@ -149,6 +149,7 @@ public class MessageHandler implements Runnable {
 							try {
 								peer.sendUninterested();
 								peer.sendChoke();
+								peer.setChoked(true);
 								System.out.println(Thread.currentThread().getName() + " Sent choke and uninterested");
 							} catch (IOException e) {
 								e.printStackTrace();
@@ -396,6 +397,10 @@ public class MessageHandler implements Runnable {
 		if (!has_piece[parser.getInt(BtUtils.REQUEST_INDEX)]) {
 			System.err.println(Thread.currentThread().getName()
 					+ " Peer requested piece that client does not have");
+			return;
+		}
+		if(peer.isChoked()){
+			System.err.println(Thread.currentThread().getName() + " choked peer requested a piece");
 			return;
 		}
 		peer.sendPiece(pieces.get(parser.getInt(BtUtils.REQUEST_INDEX)),
