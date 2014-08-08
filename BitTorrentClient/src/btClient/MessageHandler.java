@@ -51,7 +51,11 @@ public class MessageHandler implements Runnable {
 	 * 
 	 * @see TorrentInfo
 	 */
-	private TorrentInfo torrent;
+	private TorrentInfo torrentInfo;
+	/**
+	 * The {@link ActiveTorrent} object responsible for managing this {@link MessageHandler}
+	 */
+	private ActiveTorrent torrent;
 	/**
 	 * The number of downloaded bytes that this MessageHandler has discarded due
 	 * to errors or other issues
@@ -73,9 +77,13 @@ public class MessageHandler implements Runnable {
 	 * boolean indicated whether or not the client has finished donwloading
 	 */
 	private boolean complete;
-	
+
 	private Status status;
-	
+	/**
+	 * If true, indicates that this thread has been requested to be killed by
+	 * the GUI
+	 */
+	private boolean killme;
 
 	/**
 	 * Returns a new message handler object, created with the given parameters
@@ -86,14 +94,14 @@ public class MessageHandler implements Runnable {
 	 * @param {@link#clientID}
 	 * @param {@link#torr}
 	 */
-	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
-			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
-		this.pieces = pieces;
+	public MessageHandler(ActiveTorrent torrent, Peer peer) {
+		this.torrent = torrent;
+		this.torrentInfo = torrent.getTorrentInfo();
+		this.pieces = torrent.getPieces();
 		this.peer = peer;
-		this.info_hash = info_hash;
-		this.clientID = clientID;
+		this.info_hash = torrentInfo.info_hash;
+		this.clientID = torrent.getClientID();
 		choked = true;
-		this.torrent = torr;
 		wasted = 0;
 		// initialize peer has_piece array
 		peer.setHasPieces(new boolean[pieces.size()]);
@@ -125,6 +133,12 @@ public class MessageHandler implements Runnable {
 		}
 		// While connected : communication loop
 		while (peer.isConnected() && !peer.isClosed()) {
+			if(killme){
+				System.err.println(Thread.currentThread().getName() + " being killed");
+				peer.disconnect();
+				peer.closeEverything();
+				return;
+			}
 			updateHasPiece();
 			// debug();
 			if (!choked) {
@@ -143,12 +157,16 @@ public class MessageHandler implements Runnable {
 						System.out
 								.println(Thread.currentThread().getName()
 										+ " Selected null piece: Probably means none available");
-						// if the peer has no pieces we want and we are not seeding then make sure peer is choked
-						if(!peer.isChoked()){
+						// if the peer has no pieces we want and we are not
+						// seeding then make sure peer is choked
+						if (!peer.isChoked()) {
 							try {
 								peer.sendUninterested();
 								peer.sendChoke();
-								System.out.println(Thread.currentThread().getName() + " Sent choke and uninterested");
+								peer.setChoked(true);
+								System.out.println(Thread.currentThread()
+										.getName()
+										+ " Sent choke and uninterested");
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
@@ -160,7 +178,8 @@ public class MessageHandler implements Runnable {
 						}
 					}
 				}
-				// if piece is not null then the peer has a piece we are interested in
+				// if piece is not null then the peer has a piece we are
+				// interested in
 				if (piece != null) {
 					System.out.println(Thread.currentThread().getName()
 							+ " Set next piece " + piece.getIndex());
@@ -197,12 +216,8 @@ public class MessageHandler implements Runnable {
 			} catch (EOFException e) {
 				System.out.println(Thread.currentThread().getName()
 						+ " Received EOF disconnecting... ");
-				try {
-					peer.disconnect();
-					peer.closeEverything();
-				} catch (IOException e1) {
-					return;
-				}
+				peer.disconnect();
+				peer.closeEverything();
 				return;
 			} catch (IOException | InterruptedException | BtException e) {
 				e.printStackTrace();
@@ -214,7 +229,7 @@ public class MessageHandler implements Runnable {
 				+ " connection is lost");
 		// make sure all streams are closed
 		peer.closeEverything();
-		// decrement peer counters to update rarity of pieces 
+		// decrement peer counters to update rarity of pieces
 		peer.decrementPeerCounters(pieces);
 	}
 
@@ -256,13 +271,12 @@ public class MessageHandler implements Runnable {
 		case BtUtils.INTERESTED_ID:
 			System.out.println(Thread.currentThread().getName()
 					+ " Received Interested");
-			//peer.sendUnchoke();
+			peer.setInterested(true);
 			System.out.println(Thread.currentThread().getName()
 					+ " Sent Unchoke");
 			break;
 		case BtUtils.UNINTERESTED_ID:
-			System.out.println(Thread.currentThread().getName()
-					+ " Received Uninterested");
+			receiveInterested();
 			break;
 		case BtUtils.HAVE_ID:
 			receiveHave(message);
@@ -285,12 +299,18 @@ public class MessageHandler implements Runnable {
 		}
 	}
 
+	private void receiveInterested() {
+		System.out.println(Thread.currentThread().getName()
+				+ " Received Uninterested");
+		peer.setInterested(true);
+	}
+
 	/**
 	 * Reads a bitfield message and sets the boolean values of peer_has_piece
 	 * accordingly
 	 * 
 	 * @param message
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	private void receiveBitfield(byte[] message) throws IOException {
 		// remove message id from message
@@ -299,8 +319,8 @@ public class MessageHandler implements Runnable {
 		peer.setHasPieces(Peer.ConvertBitfieldToArray(bytes.array(),
 				pieces.size()));
 		peer.incrementPeerCounters(pieces);
-		for(int i = 0; i < has_piece.length; i++){
-			if(!has_piece[i] && peer.has_piece(i)){
+		for (int i = 0; i < has_piece.length; i++) {
+			if (!has_piece[i] && peer.has_piece(i)) {
 				peer.sendInterested();
 				System.out.println(Thread.currentThread().getName()
 						+ " Sent Interested");
@@ -338,7 +358,7 @@ public class MessageHandler implements Runnable {
 				+ parser.getInt(5));
 
 		currPiece.writeBlock(message);
-		System.err.println(Thread.currentThread().getName() + " Wrote Piece "
+		System.out.println(Thread.currentThread().getName() + " Wrote Piece "
 				+ parser.getInt(1) + " offset " + parser.getInt(5));
 
 		// Add number of bytes to peer's uploaded counter
@@ -348,7 +368,7 @@ public class MessageHandler implements Runnable {
 		/* Check for piece completeness and hash correctness */
 		currPiece.checkComplete();
 		if (currPiece.isComplete()) {
-			if (!currPiece.checkHash(torrent.piece_hashes[currPiece.getIndex()]
+			if (!currPiece.checkHash(torrentInfo.piece_hashes[currPiece.getIndex()]
 					.array())) {
 				System.err.println(Thread.currentThread().getName()
 						+ "Hash mismatch piece: " + currPiece.getIndex());
@@ -364,7 +384,7 @@ public class MessageHandler implements Runnable {
 				}
 			} else {
 				peer.sendHave(currPiece.getIndex());
-				System.err.println(Thread.currentThread().getName()
+				System.out.println(Thread.currentThread().getName()
 						+ " sent have piece" + currPiece.getIndex());
 			}
 		}
@@ -383,8 +403,10 @@ public class MessageHandler implements Runnable {
 		System.out.println(Thread.currentThread().getName()
 				+ " Received Request for Piece "
 				+ ByteBuffer.wrap(message).getInt(1));
-		if(parser.getInt(BtUtils.REQUEST_INDEX) < 0 || parser.getInt(BtUtils.REQUEST_INDEX) >= pieces.size()){
-			System.err.println(Thread.currentThread().getName() + " ERROR: Peer Requested invalid piece disconnecting...");
+		if (parser.getInt(BtUtils.REQUEST_INDEX) < 0
+				|| parser.getInt(BtUtils.REQUEST_INDEX) >= pieces.size()) {
+			System.err.println(Thread.currentThread().getName()
+					+ " ERROR: Peer Requested invalid piece disconnecting...");
 			peer.disconnect();
 			peer.closeEverything();
 			return;
@@ -392,6 +414,11 @@ public class MessageHandler implements Runnable {
 		if (!has_piece[parser.getInt(BtUtils.REQUEST_INDEX)]) {
 			System.err.println(Thread.currentThread().getName()
 					+ " Peer requested piece that client does not have");
+			return;
+		}
+		if (peer.isChoked()) {
+			System.err.println(Thread.currentThread().getName()
+					+ " choked thread requested piece");
 			return;
 		}
 		peer.sendPiece(pieces.get(parser.getInt(BtUtils.REQUEST_INDEX)),
@@ -547,5 +574,13 @@ public class MessageHandler implements Runnable {
 		 * System.out.println(Thread.currentThread().getName() +
 		 * " Sent bitfield"); } catch (IOException e2) { e2.printStackTrace(); }
 		 */
+	}
+
+	public void kill() {
+		killme = true;
+	}
+
+	public Status getStatus() {
+		return status;
 	}
 }

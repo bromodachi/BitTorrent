@@ -3,7 +3,9 @@ package btClient;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Timer;
 
 import javax.swing.JProgressBar;
 
@@ -14,7 +16,7 @@ public class ActiveTorrent implements Runnable {
 	 * The {@link TorrentInfo} file that is associated with this
 	 * {@link ActiveTorrent}
 	 */
-	private final TorrentInfo torrent;
+	private final TorrentInfo torrentInfo;
 	/**
 	 * The {@link CommunicationTracker} that links this {@link ActiveTorrent} to
 	 * the BitTorrent Tracker
@@ -34,6 +36,10 @@ public class ActiveTorrent implements Runnable {
 	 * The list of threads associated with this {@link ActiveTorrent}
 	 */
 	private ArrayList<Thread> threads;
+	/**
+	 * All the {@link MessageHandler} objects related to this torrent
+	 */
+	private ArrayList<MessageHandler> message_handlers;
 	/**
 	 * The location to where downloaded bytes are written
 	 */
@@ -56,7 +62,17 @@ public class ActiveTorrent implements Runnable {
 	 * A string describing the status of this torrent
 	 */
 	private Status status;
+	/**
+	 * Number of peers connected to the client and related to this torrent that
+	 * are unchoked
+	 */
+	private int unchoked_peer_count;
 
+	private Timer timer;
+
+	private ChokeHandler chokeHandler;
+
+	/* =================== CONSTRUCTOR ========================== */
 	/**
 	 * Creates a new ActiveTorrent Object for the given torrent file
 	 * 
@@ -68,11 +84,12 @@ public class ActiveTorrent implements Runnable {
 	public ActiveTorrent(TorrentInfo torrent, File file)
 			throws FileNotFoundException {
 		super();
-		this.torrent = torrent;
+		this.torrentInfo = torrent;
 		this.communicationTracker = new CommunicationTracker(torrent);
 		this.file = file;
 		peers = new ArrayList<Peer>();
 		threads = new ArrayList<Thread>();
+		message_handlers = new ArrayList<MessageHandler>();
 		active = false;
 		createPieces();
 		progressBar = new JProgressBar();
@@ -81,135 +98,36 @@ public class ActiveTorrent implements Runnable {
 		progressBar.setVisible(true);
 		gui_index = -1;
 		status = Status.Stopped;
+		unchoked_peer_count = 0;
 	}
 
+	/* =================== GETTERS ========================= */
 	public int getNumPieces() {
 		return pieces.size();
-	}
-
-	/**
-	 * Checks if this torrent is currently uploading/downloading
-	 * 
-	 * @return True if torrent active, otherwise false
-	 */
-	public boolean isActive() {
-		active = false;
-		for (Thread thread : threads) {
-			if (thread.isAlive()) {
-				active = true;
-			}
-		}
-		return active;
 	}
 
 	public String getFileName() {
 		return file.getName();
 	}
 
-	/**
-	 * Creates a new piece object for the total number of pieces in the file to
-	 * be downloaded and adds them to the pieces array list
-	 * 
-	 * @param pieces
-	 *            ArrayList of piece objects
-	 * @param torrent
-	 *            TorrentInfo object for the active download
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	private void createPieces() throws FileNotFoundException {
-		pieces = new ArrayList<Piece>();
-		int leftover = torrent.file_length % torrent.piece_length;
-
-		for (int i = 0; i < torrent.piece_hashes.length; i++) {
-			if ((i == (torrent.piece_hashes.length - 1)) && leftover != 0) {
-				pieces.add(new Piece(i, leftover, i * torrent.piece_length,
-						file, torrent.piece_hashes[i].array()));
-			} else {
-				pieces.add(new Piece(i, torrent.piece_length, i
-						* torrent.piece_length, file, torrent.piece_hashes[i]
-						.array()));
-			}
-		}
+	public JProgressBar getProgressBar() {
+		return progressBar;
 	}
 
-	/**
-	 * Creates threads and connects to peers to begin uploading/downloading,
-	 * sets {@link#active} to true;
-	 * 
-	 * @throws BtException
-	 * @throws IOException
-	 */
-	public void start() throws BtException, IOException {
-		if (!file.createNewFile()) {
-			if (!file.exists()) {
-				throw new BtException("Failed to create file");
-			}
-		}
-		System.out.println("Communicating with tracker");
-		// Send tracker started message
-		communicationTracker.CommunicateWithTracker("started",
-				getBytesCompleted());
-		peers = communicationTracker.getPeersList();
-		System.out.println("making threads");
-		// create a new MessageHandler and thread for each peer
-		int total = 0, connected = 0;
-		for (Peer peer : peers) {
-			if ( peer.getIP().equals("128.6.171.130")) {
-				Thread thread = new Thread(new MessageHandler(pieces, peer,
-						torrent.info_hash, communicationTracker.getClientID(),
-						torrent));
-				threads.add(thread);
-				thread.start();
-				System.out.println("ADDED PEER " + peer.getPeer_id());
-				connected++;
-			}
-			total++;
-		}
-		System.err.println("Total: " + total + " connected: " + connected);
-
-		// create listener for connecting peers
-
-		// indicate this torrent is active
-		System.out.println("starting main thread");
-		/*
-		 * Thread thread = new Thread(this); thread.start();
-		 */
+	public int getGuiIndex() {
+		return gui_index;
 	}
 
-	@Override
-	public void run() {
-		status = Status.Active;
-		while (isActive()) {
-			progressBar.setValue(getPercentComplete());
-			if (checkCompleteness()) {
-				status = Status.Seeding;
-			} else {
-				status = Status.Active;
-			}
-		}
-		if (checkCompleteness()) {
-			status = Status.Complete;
-		} else {
-			status = Status.Stopped;
-		}
+	public Status getStatus() {
+		return status;
 	}
 
-	public void stop() throws BtException, InterruptedException {
-		for (Peer peer : peers) {
-			try {
-				peer.disconnect();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		for (Thread thread : threads) {
-			thread.join();
-		}
-		threads.clear();
+	public ArrayList<Peer> getPeerList() {
+		return peers;
+	}
 
-		communicationTracker.CommunicateWithTracker("stopped",
-				getBytesCompleted());
+	public int getUnchokedPeerCount() {
+		return unchoked_peer_count;
 	}
 
 	/**
@@ -244,6 +162,21 @@ public class ActiveTorrent implements Runnable {
 	}
 
 	/**
+	 * Checks if this torrent is currently uploading/downloading
+	 * 
+	 * @return True if torrent active, otherwise false
+	 */
+	public boolean isAlive() {
+		for(Thread thread : threads){
+			if(thread.isAlive()){
+				System.err.println(thread.getName() + " is Alive");
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Checks the completeness of the file by calling {@link Piece#isComplete()}
 	 * for each {@link Piece}
 	 * 
@@ -251,7 +184,7 @@ public class ActiveTorrent implements Runnable {
 	 *            ArrayList of pieces that make up the file
 	 * @return True if all pieces are complete, otherwise false
 	 */
-	public boolean checkCompleteness() {
+	public boolean isComplete() {
 		for (Piece piece : pieces) {
 			if (!piece.isComplete()) {
 				return false;
@@ -260,19 +193,172 @@ public class ActiveTorrent implements Runnable {
 		return true;
 	}
 
-	public JProgressBar getProgressBar() {
-		return progressBar;
-	}
-
-	public int getGuiIndex() {
-		return gui_index;
-	}
-
+	/* ==================== SETTERS ======================== */
 	public void setGuiIndex(int gui_index) {
 		this.gui_index = gui_index;
 	}
 
-	public Status getStatus() {
+	public synchronized void incrementUnchokedPeerCount() {
+		unchoked_peer_count++;
+	}
+
+	public synchronized void decrementUnchokedPeerCount() {
+		unchoked_peer_count--;
+	}
+
+	public synchronized void setUnchokedPeerCount(int unchoked_peer_count) {
+		this.unchoked_peer_count = unchoked_peer_count;
+	}
+
+	/* ======================== METHODS ========================= */
+
+	/**
+	 * Creates threads and connects to peers to begin uploading/downloading,
+	 * sets {@link#active} to true;
+	 * 
+	 * @throws BtException
+	 * @throws IOException
+	 */
+	public void start() throws BtException, IOException {
+		unchoked_peer_count = 0;
+		// Verify file exists or create a new one
+		if (!file.createNewFile()) {
+			if (!file.exists()) {
+				throw new BtException("Failed to create file");
+			}
+		}
+
+		// Send tracker started message
+		communicationTracker.CommunicateWithTracker("started",
+				getBytesCompleted());
+		peers = communicationTracker.getPeersList();
+
+		// create a new MessageHandler and thread for each peer
+		synchronized (peers) {
+			for (Peer peer : peers) {
+				if (peer.getIP().equals("128.6.171.130")
+						|| peer.getIP().equals("128.6.171.130")) {
+					// Create MessageHandler and add to message_handlers array
+					// list
+					MessageHandler messageHandler = new MessageHandler(this, peer);
+					message_handlers.add(messageHandler);
+					// create thread from message handler and add it to the
+					// array
+					// list
+					Thread thread = new Thread(messageHandler);
+					threads.add(thread);
+					thread.start();
+				}
+			}
+		}
+		// setup timer tasks
+		chokeHandler = new ChokeHandler(this);
+		timer = new Timer();
+
+		// create listener for connecting peers
+
+		 //Thread thread = new Thread(this); thread.start();
+		 
+	}
+
+	@Override
+	public void run() {
+		try {
+			start();
+		} catch (IOException | BtException e1) {
+			e1.printStackTrace();
+		}
+		// start timer tasks
+		timer.schedule(chokeHandler, BtUtils.CHOKE_INTERVAL, BtUtils.CHOKE_INTERVAL);
+		updateStatus();
+		while (status == Status.Seeding || status == Status.Active) {
+			progressBar.setValue(getPercentComplete());
+			updateStatus();
+			System.err.println("Current number of unchoked peers" + getUnchokedPeerCount());
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		updateStatus();
+		
+		
+		//clear timer tasks
+		timer.cancel();
+	}
+
+	public void stop() throws BtException, InterruptedException {
+		for (MessageHandler handler : message_handlers) {
+			handler.kill();
+		}
+		for (Thread thread : threads) {
+			thread.join();
+			System.out.println(thread.getName() + "joined");
+		}
+		threads.clear();
+
+		communicationTracker.CommunicateWithTracker("stopped",
+				getBytesCompleted());
+		System.err.println("Should be dead");
+		updateStatus();
+	}
+
+	/**
+	 * Creates a new piece object for the total number of pieces in the file to
+	 * be downloaded and adds them to the pieces array list
+	 * 
+	 * @param pieces
+	 *            ArrayList of piece objects
+	 * @param torrentInfo
+	 *            TorrentInfo object for the active download
+	 * @return
+	 * @throws FileNotFoundException
+	 */
+	private void createPieces() throws FileNotFoundException {
+		pieces = new ArrayList<Piece>();
+		int leftover = torrentInfo.file_length % torrentInfo.piece_length;
+
+		for (int i = 0; i < torrentInfo.piece_hashes.length; i++) {
+			if ((i == (torrentInfo.piece_hashes.length - 1)) && leftover != 0) {
+				pieces.add(new Piece(i, leftover, i * torrentInfo.piece_length,
+						file, torrentInfo.piece_hashes[i].array()));
+			} else {
+				pieces.add(new Piece(i, torrentInfo.piece_length, i
+						* torrentInfo.piece_length, file, torrentInfo.piece_hashes[i]
+						.array()));
+			}
+		}
+	}
+	
+	private Status updateStatus(){
+		if(!isAlive()){
+			if(isComplete()){
+				status = Status.Complete;
+			}else{
+				status = Status.Stopped;
+			}
+		}else{
+			if(isComplete()){
+				status = Status.Seeding;
+			}else{
+				status = Status.Active;
+			}
+		}
 		return status;
 	}
+
+	public ArrayList<Piece> getPieces() {
+		return pieces;
+	}
+
+	public TorrentInfo getTorrentInfo() {
+		return torrentInfo;
+	}
+
+	public ByteBuffer getClientID() {
+		return communicationTracker.getClientID();
+	}
+
 }

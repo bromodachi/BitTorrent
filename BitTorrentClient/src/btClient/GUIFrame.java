@@ -3,6 +3,8 @@ package btClient;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
@@ -21,7 +23,6 @@ import javax.swing.JTable;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
 
 import java.awt.Dimension;
 
@@ -34,6 +35,19 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 	private JTable torrentTable;
 
 	public GUIFrame() {
+		
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+			} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+			} catch (InstantiationException e) {
+			e.printStackTrace();
+			} catch (IllegalAccessException e) {
+			e.printStackTrace();
+			} catch (UnsupportedLookAndFeelException e) {
+			e.printStackTrace();
+			}
+		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setMinimumSize(new Dimension(400, 300));
 		setPreferredSize(new Dimension(600, 800));
@@ -154,7 +168,8 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 
 	private void addTorrent() throws FileNotFoundException, BencodingException,
 			IOException {
-		File torrentInfo = null, file = null;
+		TorrentInfo torrentInfo = null;
+		File file = null;
 		FileFilter filter = new FileNameExtensionFilter("Torrent File",
 				"torrent");
 		JFileChooser fc = new JFileChooser();
@@ -163,19 +178,20 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		// Prompt user for torrent file
 		int returnVal = fc.showOpenDialog(this);
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
-			torrentInfo = fc.getSelectedFile();
+			torrentInfo = new TorrentInfo(BtUtils.getFileBytes(fc.getSelectedFile()));
 		} else {
 			return;
 		}
 		fc.removeChoosableFileFilter(filter);
 		// prompt user for save location
+		fc.setSelectedFile(new File(torrentInfo.file_name));
 		returnVal = fc.showSaveDialog(this);
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
 			file = fc.getSelectedFile();
 		} else {
 			return;
 		}
-		ActiveTorrent torrent = new ActiveTorrent(new TorrentInfo(BtUtils.getFileBytes(torrentInfo)), file);
+		ActiveTorrent torrent = new ActiveTorrent(torrentInfo, file);
 		torrents.add(torrent);
 		Object [] row = new Object [3];
 		row[0] = (Object)file.getName();
@@ -205,7 +221,7 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		int row = torrentTable.getSelectedRow();
 		for(ActiveTorrent torrent : torrents){
 			if(torrent.getGuiIndex() == row){
-				torrent.start();
+				new Thread(torrent).start();
 				break;
 			}
 		}
@@ -213,7 +229,6 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 
 	private void stopTorrent() throws InterruptedException, BtException {
 		int row = torrentTable.getSelectedRow();
-		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		for(ActiveTorrent torrent : torrents){
 			if(torrent.getGuiIndex() == row){
 				torrent.stop();
