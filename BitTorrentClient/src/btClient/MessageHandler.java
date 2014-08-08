@@ -11,6 +11,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 
 import btClient.BtUtils.Status;
@@ -37,6 +38,7 @@ public class MessageHandler implements Runnable {
 	 * The {@link TorrentInfo#info_hash} for the current torrent file
 	 */
 	private final ByteBuffer info_hash;
+	 private int []pieceLowest;
 	/**
 	 * The local peer_ID for this client
 	 */
@@ -46,6 +48,7 @@ public class MessageHandler implements Runnable {
 	 * this MessageHandler is responsible for
 	 */
 	private boolean choked;
+	private ArrayList<Peer> peers;
 	/**
 	 * All general info relating to this torrent
 	 * 
@@ -86,14 +89,15 @@ public class MessageHandler implements Runnable {
 	 * @param {@link#clientID}
 	 * @param {@link#torr}
 	 */
-	public MessageHandler(ArrayList<Piece> pieces, Peer peer,
-			ByteBuffer info_hash, ByteBuffer clientID, TorrentInfo torr) {
-		this.pieces = pieces;
+	public MessageHandler(ActiveTorrent activeTorrent, Peer peer, ArrayList<Peer> peers) {
+		this.torrent = activeTorrent.getTorrentInfo();
+		this.pieces = activeTorrent.getPieces();
+		pieceLowest=new int [pieces.size()];
+		this.peers=peers;
+		this.info_hash = torrent.info_hash;
+		this.clientID = activeTorrent.getClientId();
 		this.peer = peer;
-		this.info_hash = info_hash;
-		this.clientID = clientID;
 		choked = true;
-		this.torrent = torr;
 		wasted = 0;
 		// initialize peer has_piece array
 		peer.setHasPieces(new boolean[pieces.size()]);
@@ -128,6 +132,7 @@ public class MessageHandler implements Runnable {
 			updateHasPiece();
 			// debug();
 			if (!choked) {
+
 				// if piece is completed set it to null to get next piece
 				if (piece != null) {
 					if (piece.isComplete()) {
@@ -148,6 +153,7 @@ public class MessageHandler implements Runnable {
 							try {
 								peer.sendUninterested();
 								peer.sendChoke();
+								peer.setChoked(true);
 								System.out.println(Thread.currentThread().getName() + " Sent choke and uninterested");
 							} catch (IOException e) {
 								e.printStackTrace();
@@ -200,6 +206,7 @@ public class MessageHandler implements Runnable {
 				try {
 					peer.disconnect();
 					peer.closeEverything();
+					peer.setChoked(true);
 				} catch (IOException e1) {
 					return;
 				}
@@ -252,11 +259,13 @@ public class MessageHandler implements Runnable {
 			System.out.println(Thread.currentThread().getName()
 					+ " Received unchoke");
 			choked = false;
+		
 			break;
 		case BtUtils.INTERESTED_ID:
 			System.out.println(Thread.currentThread().getName()
 					+ " Received Interested");
-			//peer.sendUnchoke();
+			peer.sendUnchoke();
+			peer.setChoked(false);
 			System.out.println(Thread.currentThread().getName()
 					+ " Sent Unchoke");
 			break;
@@ -437,50 +446,61 @@ public class MessageHandler implements Runnable {
 	 * 
 	 * @return the next piece to download
 	 */
-	private Piece getNextPiece() {
-		int rarity = 0;
-		ArrayList<Piece> available = new ArrayList<Piece>();
-		// check rarity of each piece
-		for (Piece piece : pieces) {
-			// System.err.println(Thread.currentThread().getName() + " Piece " +
-			// piece.getIndex() + " Peer Count " + piece.getPeerCount());
-			// if rarity is still 0 set rarity to the current piece's peer count
-			if (rarity == 0) {
-				rarity = piece.getPeerCount();
-			}
-			// if current piece is more rare than current rarity (but not 0) set
-			// rarity to current peercount
-			if (piece.getPeerCount() > 0 && piece.getPeerCount() < rarity) {
-				rarity = piece.getPeerCount();
-				// if rarity has been lowered clear array list of any pieces
-				// System.err.println(Thread.currentThread().getName() +
-				// " Cleared available : rarity " + rarity);
-				available.clear();
-			}
-			// if current piece matches rarity then add it to array list
-			if (piece.getPeerCount() == rarity && !piece.isComplete()
-					&& peer.has_piece(piece.getIndex())) {
-				available.add(piece);
-				// System.err.println(Thread.currentThread().getName() +
-				// " Adding piece to available " + piece.getIndex());
-			}
-		}
-		// if rarity == 0 then no peers have any pieces, if size == 0 connected
-		// peer doesn't have pieces we need
-		if (rarity == 0) {
-			System.err.println(Thread.currentThread().getName()
-					+ " returning null cuz rarity == 0");
-			return null;
-		}
-		if (available.size() == 0) {
-			System.err.println(Thread.currentThread().getName()
-					+ " returning null cuz avialbe.size() == 0");
-			return null;
-		}
-		// generate random number for tie breaker
-		Random rand = new Random();
-		return available.get(rand.nextInt(available.size()));
-	}
+	private synchronized  Piece getNextPiece() {
+        updateGetLowest();
+        int min = Integer.MAX_VALUE;
+        for(int i = 0; i < this.pieceLowest.length; i++){
+        	
+        	if(this.has_piece==null){
+        		System.err.println("======================NULLLLLL for has piece at i: "+i);
+        	}
+        	if(peer.getHasPieceArray()==null){
+        		System.out.println("NULLLLLL for has peerHas");
+        	}
+            if(this.has_piece[i] == false && peer.getHasPieceArray()[i] == true){
+                if(min > this.pieceLowest[i]){
+                    min = pieceLowest[i];
+                }
+            }
+        }
+        if(min==Integer.MAX_VALUE){
+            return null;
+        }
+        ArrayList<Integer> indices = new ArrayList<Integer>();
+
+        for(int i = 0; i < this.pieceLowest.length; i++){
+            if(this.has_piece[i] == false && peer.getHasPieceArray()[i] == true){
+                if(min == this.pieceLowest[i]){
+                    indices.add(i);
+                }
+            }
+        }
+         
+        Random random = new Random();
+        int n = random.nextInt(indices.size());
+        Piece piece =pieces.get(indices.get(n));
+        System.out.println("I have this piece"+peer.getHasPieceArray()[indices.get(n)]);
+        System.out.println("Does the host have it? "+has_piece[indices.get(n)]);
+        return piece;
+       
+    }
+   
+    private synchronized void updateGetLowest(){
+        Arrays.fill(this.pieceLowest, 0);
+        for(Peer peer : this.peers){
+            for(int i = 0; i < this.pieceLowest.length; i++){
+            		if(peer.getHasPieceArray()==null){
+            			continue;
+            		}
+                    if(peer.getHasPieceArray()[i] == true){
+                        this.pieceLowest[i] += 1;
+                        if(has_piece[i]){
+                            this.pieceLowest[i] += 10;
+                        }
+                    }
+                }
+            }
+    }
 
 	/**
 	 * updates the has_piece boolean array for this thread, and checks

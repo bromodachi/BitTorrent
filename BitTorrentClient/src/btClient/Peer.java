@@ -93,6 +93,9 @@ public class Peer {
 	public String getIP() {
 		return IP;
 	}
+	public boolean [] getHasPieceArray(){
+    	return this.has_piece;
+    }
 
 	public String getPeer_id() {
 		return peer_id;
