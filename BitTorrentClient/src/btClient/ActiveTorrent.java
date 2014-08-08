@@ -183,7 +183,7 @@ public class ActiveTorrent implements Runnable {
 		
 		for (Peer peer : peers) {
 			if ( peer.getIP().equals("128.6.171.130")||peer.getIP().equals("128.6.171.131")) {
-				Thread thread = new Thread(new MessageHandler(this, peer, peers));
+				Thread thread = new Thread(new MessageHandler(this, peer));
 				threads.add(thread);
 				thread.start();
 				System.out.println("ADDED PEER " + peer.getPeer_id());
@@ -360,6 +360,9 @@ public class ActiveTorrent implements Runnable {
 	
 	public synchronized void addPeerToList(Peer p){
 		System.err.println("\nI added a new peer :D\n");
+		Thread thread = new Thread(new MessageHandler(this, p));
+		threads.add(thread);
+		thread.start();
 		this.peers.add(p);
 	}
 }

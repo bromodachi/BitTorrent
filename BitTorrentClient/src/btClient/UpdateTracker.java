@@ -35,8 +35,11 @@ public class UpdateTracker extends TimerTask{
 			//if it's still false, we can safely add the peer
 			System.out.println(addMe);
 			if(!addMe){
-				System.out.println(p.getIP());
-				this.activeTorrent.addPeerToList(p);
+				//only add rutgers IP addresses. 
+				if(p.getIP().equals("128.6.171.130")||p.getIP().equals("128.6.171.131")){
+					System.out.println(p.getIP());
+					this.activeTorrent.addPeerToList(p);
+				}
 			}
 			//set addMe to false before we go back to the 2nd loop
 			addMe=false;

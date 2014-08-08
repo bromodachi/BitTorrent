@@ -44,6 +44,7 @@ public class MessageHandler implements Runnable {
 	 */
 	private final ByteBuffer info_hash;
 	 private int []pieceLowest;
+	 private ActiveTorrent active;
 	/**
 	 * The local peer_ID for this client
 	 */
@@ -53,7 +54,7 @@ public class MessageHandler implements Runnable {
 	 * this MessageHandler is responsible for
 	 */
 	private boolean choked;
-	private ArrayList<Peer> peers;
+//	private ArrayList<Peer> peers;
 	/**
 	 * All general info relating to this torrent
 	 * 
@@ -94,11 +95,12 @@ public class MessageHandler implements Runnable {
 	 * @param {@link#clientID}
 	 * @param {@link#torr}
 	 */
-	public MessageHandler(ActiveTorrent activeTorrent, Peer peer, ArrayList<Peer> peers) {
+	public MessageHandler(ActiveTorrent activeTorrent, Peer peer) {
 		this.torrent = activeTorrent.getTorrentInfo();
 		this.pieces = activeTorrent.getPieces();
 		pieceLowest=new int [pieces.size()];
-		this.peers=peers;
+	//	this.peers=peers;
+		this.active=activeTorrent;
 		this.info_hash = torrent.info_hash;
 		this.clientID = activeTorrent.getClientId();
 		this.peer = peer;
@@ -492,7 +494,7 @@ public class MessageHandler implements Runnable {
    
     private synchronized void updateGetLowest(){
         Arrays.fill(this.pieceLowest, 0);
-        for(Peer peer : this.peers){
+        for(Peer peer : this.active.getPeers()){
             for(int i = 0; i < this.pieceLowest.length; i++){
             		if(peer.getHasPieceArray()==null){
             			continue;
