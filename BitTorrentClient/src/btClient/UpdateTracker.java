@@ -24,7 +24,7 @@ public class UpdateTracker extends TimerTask{
 		updatesPeers=activeTorrent.getCommunicarionTracker().getPeersList();
 		boolean addMe=false;
 		for(Peer p: updatesPeers){
-			for( Peer q: this.peers){
+			for( Peer q: this. activeTorrent.getPeers()){
 				//if we find a matching peer class, break out of the 2nd for loop
 				//don't add
 				if(p.equals(q)){

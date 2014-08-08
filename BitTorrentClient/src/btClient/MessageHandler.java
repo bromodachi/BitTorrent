@@ -161,7 +161,7 @@ public class MessageHandler implements Runnable {
 								peer.sendUninterested();
 								peer.sendChoke();
 								peer.setChoked(true);
-			//					System.out.println(Thread.currentThread().getName() + " Sent choke and uninterested");
+								System.out.println(Thread.currentThread().getName() + " Sent choke and uninterested");
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
@@ -269,8 +269,8 @@ public class MessageHandler implements Runnable {
 		
 			break;
 		case BtUtils.INTERESTED_ID:
-//			System.out.println(Thread.currentThread().getName()
-//					+ " Received Interested");
+			System.err.println("//////////////"+Thread.currentThread().getName()
+					+ " Received Interested"+"//////////////");
 			peer.sendUnchoke();
 			peer.setChoked(false);
 	//		System.out.println(Thread.currentThread().getName()
