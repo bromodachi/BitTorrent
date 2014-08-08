@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Timer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JProgressBar;
 
@@ -13,6 +16,16 @@ import btClient.BtUtils.Status;
 
 public class ActiveTorrent implements Runnable {
 	private int unchoked_peers;
+	UpdateTracker updater;
+	ScheduledExecutorService executor;
+	/**
+	 * Update int interval for the updateTimer, probably shouldn't be a global variable
+	 */
+	int updatePeriod;
+	/**
+	 * Timer to communicate with the tracker.
+	 */
+	private Timer timerForUpdateTracker;
 	/**
 	 *  worstPeer extends timer to select a pere to choke and then pick
 	 *  a peer randomly to unchoke
@@ -21,7 +34,7 @@ public class ActiveTorrent implements Runnable {
 	/**
 	 * Timer for choke/unchoke algo
 	 */
-	private Timer timer;
+//	private ScheduledExecutorService timer;
 	/**
 	 * The {@link TorrentInfo} file that is associated with this
 	 * {@link ActiveTorrent}
@@ -185,9 +198,25 @@ public class ActiveTorrent implements Runnable {
 		// indicate this torrent is active
 		System.out.println("starting main thread");
 		worstPeer=new GetWorstPeer(peers, this);
-		timer = new Timer();
-		timer.schedule(worstPeer, 30000, 30000);
+		executor = Executors.newScheduledThreadPool(1);
+		executor.scheduleAtFixedRate(worstPeer, 30, 30, TimeUnit.SECONDS);
+		this.updater=new UpdateTracker(this);
+		timerForUpdateTracker=new Timer();
+		//update period should be no less than the min_interval returned by the tracker 
+		if(communicationTracker.getMinInterval()!=0){
+			this.updatePeriod=communicationTracker.getMinInterval();
+		}
+		else{
+			//(or half of interval, if min_interval is not present)
+			this.updatePeriod=communicationTracker.getInterval()/2;
+			if(updatePeriod>180){
+				// In the event that the interval value is excessively large, you may cap it at 180 seconds.
+				this.updatePeriod=180;
+			}
+		}
+		timerForUpdateTracker.scheduleAtFixedRate(updater, communicationTracker.getInterval()*1000, this.updatePeriod*1000);
 		status = Status.Active;
+		
 		
 		/*
 		 * Thread thread = new Thread(this); thread.start();
@@ -290,6 +319,9 @@ public class ActiveTorrent implements Runnable {
  	public ByteBuffer getClientId() {
  		return communicationTracker.getClientID();
  	}
+ 	public CommunicationTracker getCommunicarionTracker(){
+ 		return this.communicationTracker;
+ 	}
  
  	public synchronized int getUnchokedPeers() {
  		return unchoked_peers;
@@ -321,5 +353,13 @@ public class ActiveTorrent implements Runnable {
 
 	public Status getStatus() {
 		return status;
+	}
+	public ArrayList<Peer> getPeers(){
+		return this.peers;
+	}
+	
+	public synchronized void addPeerToList(Peer p){
+		System.err.println("\nI added a new peer :D\n");
+		this.peers.add(p);
 	}
 }

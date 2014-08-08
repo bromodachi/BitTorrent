@@ -46,6 +46,7 @@ public class CommunicationTracker {
 	ArrayList<Map<ByteBuffer, Object>> peers;
 	/* Below is client information */
 	private final ByteBuffer clientID;
+	int min_interval;
 	int interval;
 	int complete;
 	int incomplete;
@@ -86,6 +87,10 @@ public class CommunicationTracker {
 
 	public int incomplete() {
 		return incomplete;
+	}
+	
+	public int getMinInterval(){
+		return min_interval;
 	}
 
 	/**
@@ -167,8 +172,8 @@ public class CommunicationTracker {
 		}
 		else if(event.equals("stopped")){
 			this.event = "stopped";
-			this.downloaded = torrentInfo.file_length;
-			this.left = 0;
+			this.downloaded = downloaded;
+			this.left =torrentInfo.file_length -downloaded;
 		}
 		else if(event.equals(" ")){
 			this.event="";
@@ -237,6 +242,8 @@ public class CommunicationTracker {
 				System.err.println("Failure: " + errorMessage);
 				throw new BtException(errorMessage);
 			}
+			min_interval=interval = (int) responseMap.get(ByteBuffer.wrap(new byte[] {
+					'm', 'i','n', ' ','i','n', 't', 'e', 'r', 'v', 'a', 'l' }));
 
 			interval = (int) responseMap.get(ByteBuffer.wrap(new byte[] { 'i',
 					'n', 't', 'e', 'r', 'v', 'a', 'l' }));
