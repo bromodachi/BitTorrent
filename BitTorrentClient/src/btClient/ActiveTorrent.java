@@ -81,8 +81,7 @@ public class ActiveTorrent implements Runnable {
 	 * @param {@link#file}
 	 * @throws FileNotFoundException
 	 */
-	public ActiveTorrent(TorrentInfo torrent, File file)
-			throws FileNotFoundException {
+	public ActiveTorrent(TorrentInfo torrent, File file) throws FileNotFoundException {
 		super();
 		this.torrentInfo = torrent;
 		this.communicationTracker = new CommunicationTracker(torrent);
@@ -167,13 +166,16 @@ public class ActiveTorrent implements Runnable {
 	 * @return True if torrent active, otherwise false
 	 */
 	public boolean isAlive() {
-		for(Thread thread : threads){
-			if(thread.isAlive()){
-				System.err.println(thread.getName() + " is Alive");
-				return true;
+		boolean isalive = false;
+		for (Thread thread : threads) {
+			if (thread.isAlive()) {
+				//System.err.println(thread.getName() + " is Alive");
+				isalive = true;
+			} else {
+				//System.err.println(thread.getName() + " is dead");
 			}
 		}
-		return false;
+		return isalive;
 	}
 
 	/**
@@ -229,15 +231,15 @@ public class ActiveTorrent implements Runnable {
 		}
 
 		// Send tracker started message
-		communicationTracker.CommunicateWithTracker("started",
-				getBytesCompleted());
+		communicationTracker.CommunicateWithTracker("started", getBytesCompleted());
 		peers = communicationTracker.getPeersList();
 
 		// create a new MessageHandler and thread for each peer
 		synchronized (peers) {
 			for (Peer peer : peers) {
-				if (peer.getIP().equals("128.6.171.130")
-						|| peer.getIP().equals("128.6.171.130")) {
+				// Connect only to the specified IP addresses as for the
+				// assignment specification
+				if (peer.getIP().equals("128.6.171.130") || peer.getIP().equals("128.6.171.131")) {
 					// Create MessageHandler and add to message_handlers array
 					// list
 					MessageHandler messageHandler = new MessageHandler(this, peer);
@@ -252,13 +254,11 @@ public class ActiveTorrent implements Runnable {
 			}
 		}
 		// setup timer tasks
-		chokeHandler = new ChokeHandler(this);
-		timer = new Timer();
 
 		// create listener for connecting peers
 
-		 //Thread thread = new Thread(this); thread.start();
-		 
+		// Thread thread = new Thread(this); thread.start();
+
 	}
 
 	@Override
@@ -269,7 +269,9 @@ public class ActiveTorrent implements Runnable {
 			e1.printStackTrace();
 		}
 		// start timer tasks
-		timer.schedule(chokeHandler, BtUtils.CHOKE_INTERVAL, BtUtils.CHOKE_INTERVAL);
+		chokeHandler = new ChokeHandler(this);
+		timer = new Timer();
+		timer.schedule(chokeHandler, 5000, BtUtils.CHOKE_INTERVAL);
 		updateStatus();
 		while (status == Status.Seeding || status == Status.Active) {
 			progressBar.setValue(getPercentComplete());
@@ -283,9 +285,8 @@ public class ActiveTorrent implements Runnable {
 			}
 		}
 		updateStatus();
-		
-		
-		//clear timer tasks
+
+		// clear timer tasks
 		timer.cancel();
 	}
 
@@ -299,8 +300,7 @@ public class ActiveTorrent implements Runnable {
 		}
 		threads.clear();
 
-		communicationTracker.CommunicateWithTracker("stopped",
-				getBytesCompleted());
+		communicationTracker.CommunicateWithTracker("stopped", getBytesCompleted());
 		System.err.println("Should be dead");
 		updateStatus();
 	}
@@ -322,27 +322,24 @@ public class ActiveTorrent implements Runnable {
 
 		for (int i = 0; i < torrentInfo.piece_hashes.length; i++) {
 			if ((i == (torrentInfo.piece_hashes.length - 1)) && leftover != 0) {
-				pieces.add(new Piece(i, leftover, i * torrentInfo.piece_length,
-						file, torrentInfo.piece_hashes[i].array()));
+				pieces.add(new Piece(i, leftover, i * torrentInfo.piece_length, file, torrentInfo.piece_hashes[i].array()));
 			} else {
-				pieces.add(new Piece(i, torrentInfo.piece_length, i
-						* torrentInfo.piece_length, file, torrentInfo.piece_hashes[i]
-						.array()));
+				pieces.add(new Piece(i, torrentInfo.piece_length, i * torrentInfo.piece_length, file, torrentInfo.piece_hashes[i].array()));
 			}
 		}
 	}
-	
-	private Status updateStatus(){
-		if(!isAlive()){
-			if(isComplete()){
+
+	private Status updateStatus() {
+		if (!isAlive()) {
+			if (isComplete()) {
 				status = Status.Complete;
-			}else{
+			} else {
 				status = Status.Stopped;
 			}
-		}else{
-			if(isComplete()){
+		} else {
+			if (isComplete()) {
 				status = Status.Seeding;
-			}else{
+			} else {
 				status = Status.Active;
 			}
 		}

@@ -1,6 +1,5 @@
 package btClient;
 
-
 /**
  * An object representing a single block within a {@link Piece}; This class
  * contains the {@link#lock} for this block and keeps track of relevant data
@@ -45,8 +44,7 @@ public class Block {
 	 * @param {@link #offset}
 	 * @param {@link #size}
 	 */
-	public Block(int piece_index, int index, int offset, int size,
-			boolean lastBlock) {
+	public Block(int piece_index, int index, int offset, int size, boolean lastBlock) {
 		this.piece_index = piece_index;
 		this.index = index;
 		this.offset = offset;
@@ -58,9 +56,7 @@ public class Block {
 	@Override
 	public boolean equals(Object object) {
 		if (object.getClass() == this.getClass()) {
-			if (((Block) object).getPieceIndex() == this.piece_index
-					&& ((Block) object).getIndex() == this.index
-					&& ((Block) object).getSize() == this.size) {
+			if (((Block) object).getPieceIndex() == this.piece_index && ((Block) object).getIndex() == this.index && ((Block) object).getSize() == this.size) {
 				return true;
 			}
 		}

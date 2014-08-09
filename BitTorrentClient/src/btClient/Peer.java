@@ -50,6 +50,10 @@ public class Peer {
 	 * indicates whether or not this peer is interested in pieces that we have
 	 */
 	private boolean interested;
+	/**
+	 * Indicates whether or not we are interested in downloading from this peer
+	 */
+	private boolean interesting;
 
 	/**
 	 * Creats a new Peer object with the given parameters
@@ -67,14 +71,14 @@ public class Peer {
 		downloaded = 0;
 		choked = true;
 		interested = false;
+		interesting = false;
 
 	}
 
 	@Override
 	public boolean equals(Object object) {
 		if (object.getClass() == this.getClass()) {
-			if (((Peer) object).getPeer_id() == this.getPeer_id()
-					&& ((Peer) object).getIP().equals(this.getIP())) {
+			if (((Peer) object).getPeer_id() == this.getPeer_id() && ((Peer) object).getIP().equals(this.getIP())) {
 				return true;
 			}
 		}
@@ -127,23 +131,29 @@ public class Peer {
 	}
 
 	public boolean isClosed() {
+		if (connection == null) {
+			return true;
+		}
 		return connection.isClosed();
 	}
-	
+
 	/**
 	 * Checks if connection to peer is still valid
 	 * 
 	 * @return True if connection is open, otherwise false
 	 */
 	public boolean isConnected() {
-		return !connection.isClosed();
+		if (connection == null) {
+			return false;
+		}
+		return connection.isConnected();
 	}
 
 	public boolean isInterested() {
 		return interested;
 	}
 
-	/* =============== Setters ================ */
+	/* =============== SETTERS ================ */
 	public void setInterval(int interval) {
 		this.interval = interval;
 	}
@@ -183,7 +193,7 @@ public class Peer {
 	 *            number of bytes uploaded
 	 */
 	public void uploaded(int uploaded) {
-		this.uploaded += uploaded;
+		this.uploaded = uploaded + this.uploaded;
 	}
 
 	public void setDownloaded(int downloaded) {
@@ -197,7 +207,7 @@ public class Peer {
 	 *            number of bytes downloaded
 	 */
 	public void downloaded(int downloaded) {
-		this.downloaded += downloaded;
+		this.downloaded += this.downloaded + downloaded;
 	}
 
 	/**
@@ -283,16 +293,13 @@ public class Peer {
 	 * @throws UnknownHostException
 	 * @throws IOException
 	 */
-	public boolean establishConnection(ByteBuffer info_hash, ByteBuffer clientID)
-			throws UnknownHostException, IOException {
+	public boolean establishConnection(ByteBuffer info_hash, ByteBuffer clientID) throws UnknownHostException, IOException {
 		connection = new Socket(IP, port);
 		inputStream = new DataInputStream(connection.getInputStream());
 		outputStream = new DataOutputStream(connection.getOutputStream());
 		// connection.setSoTimeout(BtUtils.MAX_TIME);
 
-		ByteBuffer handshake = ByteBuffer
-				.wrap(new byte[BtUtils.p2pHandshakeLength
-						+ info_hash.array().length + clientID.array().length]);
+		ByteBuffer handshake = ByteBuffer.wrap(new byte[BtUtils.p2pHandshakeLength + info_hash.array().length + clientID.array().length]);
 		handshake.put(BtUtils.p2pHandshakeHeader);
 		handshake.put(info_hash.array());
 		handshake.put(clientID.array());
@@ -307,8 +314,7 @@ public class Peer {
 
 		if (!isSameHash(info_hash.array(), response)) {
 			closeEverything();
-			System.err
-					.println("FATAL ERROR: Tracker info_hash did not match file info_hash");
+			System.err.println("FATAL ERROR: Tracker info_hash did not match file info_hash");
 			return false;
 		}
 		return true;
@@ -333,20 +339,24 @@ public class Peer {
 				return true;
 			}
 		}
-		System.err
-				.println("Verfication fail (info_hash mismatch)...connection will drop now");
+		System.err.println("Verfication fail (info_hash mismatch)...connection will drop now");
 		return false;
 	}
 
-	
 	/**
 	 * Closes all streams and connections
 	 */
 	public void closeEverything() {
 		try {
-			inputStream.close();
-			outputStream.close();
-			connection.close();
+			if (inputStream != null) {
+				inputStream.close();
+			}
+			if (outputStream != null) {
+				outputStream.close();
+			}
+			if (connection != null) {
+				connection.close();
+			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -365,8 +375,7 @@ public class Peer {
 	 * @return boolean array of boolean values representing the peers possesion
 	 *         of the peice corresponding to the array's index
 	 */
-	public static boolean[] ConvertBitfieldToArray(byte[] bitfield,
-			int numPieces) {
+	public static boolean[] ConvertBitfieldToArray(byte[] bitfield, int numPieces) {
 		boolean[] bool = new boolean[numPieces];
 		for (int i = 0; i < bool.length; i++) {
 			// from the java docs of a bitset : ((bb.get(bb.position()+n/8) &
@@ -412,7 +421,7 @@ public class Peer {
 			}
 		}
 	}
-	
+
 	/* ================ SEND MESSAGE METHODS ==================== */
 	/**
 	 * Sends an all zero keep alive message to the peer
@@ -432,8 +441,7 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public void sendChoke() throws IOException {
-		byte[] bytes = new byte[BtUtils.CHOKE_LENGTH_PREFIX
-				+ BtUtils.PREFIX_LENGTH];
+		byte[] bytes = new byte[BtUtils.CHOKE_LENGTH_PREFIX + BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.CHOKE_LENGTH_PREFIX);
 		message.put((BtUtils.CHOKE_ID));
@@ -449,8 +457,7 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public void sendUnchoke() throws IOException {
-		byte[] bytes = new byte[BtUtils.UNCHOKE_LENGTH_PREFIX
-				+ BtUtils.PREFIX_LENGTH];
+		byte[] bytes = new byte[BtUtils.UNCHOKE_LENGTH_PREFIX + BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.UNCHOKE_LENGTH_PREFIX);
 		message.put((BtUtils.UNCHOKE_ID));
@@ -466,8 +473,7 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public void sendInterested() throws IOException {
-		byte[] bytes = new byte[BtUtils.INTERESTED_LENGTH_PREFIX
-				+ BtUtils.PREFIX_LENGTH];
+		byte[] bytes = new byte[BtUtils.INTERESTED_LENGTH_PREFIX + BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.INTERESTED_LENGTH_PREFIX);
 		message.put((BtUtils.INTERESTED_ID));
@@ -483,8 +489,7 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public void sendUninterested() throws IOException {
-		byte[] bytes = new byte[BtUtils.UNINTERESTED_LENGTH_PREFIX
-				+ BtUtils.PREFIX_LENGTH];
+		byte[] bytes = new byte[BtUtils.UNINTERESTED_LENGTH_PREFIX + BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.UNINTERESTED_LENGTH_PREFIX);
 		message.put((BtUtils.UNINTERESTED_ID));
@@ -502,8 +507,7 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public void sendHave(int index) throws IOException {
-		byte[] bytes = new byte[BtUtils.HAVE_LENGTH_PREFIX
-				+ BtUtils.PREFIX_LENGTH];
+		byte[] bytes = new byte[BtUtils.HAVE_LENGTH_PREFIX + BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.HAVE_LENGTH_PREFIX);
 		message.put((BtUtils.HAVE_ID));
@@ -525,10 +529,8 @@ public class Peer {
 	 *            number of bytes in a typical block in the piece
 	 * @throws IOException
 	 */
-	public void sendRequest(int index, int block_offset, int block_length)
-			throws IOException {
-		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
-				+ BtUtils.PREFIX_LENGTH];
+	public void sendRequest(int index, int block_offset, int block_length) throws IOException {
+		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX + BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.REQUEST_LENGTH_PREFIX);
 		message.put((BtUtils.REQUEST_ID));
@@ -549,8 +551,7 @@ public class Peer {
 	 * @throws IOException
 	 */
 	public void sendRequest(Block block) throws IOException {
-		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX
-				+ BtUtils.PREFIX_LENGTH];
+		byte[] bytes = new byte[BtUtils.REQUEST_LENGTH_PREFIX + BtUtils.PREFIX_LENGTH];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.REQUEST_LENGTH_PREFIX);
 		message.put((BtUtils.REQUEST_ID));
@@ -574,10 +575,8 @@ public class Peer {
 	 *            the size of the block to send to the peer
 	 * @throws IOException
 	 */
-	public void sendPiece(Piece piece, int offset, int payload_size)
-			throws IOException {
-		byte[] bytes = new byte[BtUtils.SIZE_OF_INT + BtUtils.PIECE_HEADER_SIZE
-				+ payload_size];
+	public void sendPiece(Piece piece, int offset, int payload_size) throws IOException {
+		byte[] bytes = new byte[BtUtils.SIZE_OF_INT + BtUtils.PIECE_HEADER_SIZE + payload_size];
 		ByteBuffer message = ByteBuffer.wrap(bytes);
 		message.putInt(BtUtils.PIECE_HEADER_SIZE + payload_size);
 		message.put((BtUtils.PIECE_ID));
@@ -608,8 +607,7 @@ public class Peer {
 			}
 		}
 		byte[] bitfield = bitset.toByteArray();
-		ByteBuffer message = ByteBuffer.wrap(new byte[BtUtils.PREFIX_LENGTH
-				+ bitfield.length]);
+		ByteBuffer message = ByteBuffer.wrap(new byte[BtUtils.PREFIX_LENGTH + bitfield.length]);
 		message.put(BtUtils.BITFIELD_ID);
 		message.put(bitfield);
 		synchronized (outputStream) {
@@ -636,5 +634,13 @@ public class Peer {
 		}
 		connection.setSoTimeout(0);
 		return message;
+	}
+
+	public void setInteresting(boolean interesting) {
+		this.interesting = interesting;
+	}
+
+	public boolean isInteresting() {
+		return interesting;
 	}
 }
