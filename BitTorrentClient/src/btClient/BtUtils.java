@@ -156,6 +156,23 @@ public class BtUtils {
 	 * Number of bytes in an integer
 	 */
 	public static final int SIZE_OF_INT = 4;
+	/**
+	 * The maximum number of unchoked peers for any given {@link ActiveTorrent}
+	 */
+	public static final int MAX_UNCHOKED_PEERS = 6;
+	/**
+	 * The interval in milliseconds for which a peer should be choked/unchoked
+	 */
+	public static final int CHOKE_INTERVAL = 30000;
+	
+	public static final int MAX_UPDATE_INTERVAL = 180;
+	/**
+	 * Keep alive interval in milliseconds
+	 */
+	public static final long KEEP_ALIVE_INTERVAL = 120000;
+	public static final int TORRENT_TABLE_PROGRESS_COLUMN = 1;
+	
+	
 	
 	public static enum Status {
 		Active, Seeding, Stopped, Starting, Complete

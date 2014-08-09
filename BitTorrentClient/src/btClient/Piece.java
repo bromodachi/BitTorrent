@@ -83,8 +83,7 @@ public class Piece {
 	 *            the file to which this piece is to be saved
 	 * @throws FileNotFoundException
 	 */
-	public Piece(int index, int size, int offset, File file, byte[] hash)
-			throws FileNotFoundException {
+	public Piece(int index, int size, int offset, File file, byte[] hash) throws FileNotFoundException {
 		this.index = index;
 		this.size = size;
 		this.offset = offset;
@@ -104,11 +103,9 @@ public class Piece {
 		blocks = new ArrayList<Block>(numBlocks);
 		for (int i = 0; i < numBlocks; i++) {
 			if (i == (numBlocks - 1)) {
-				blocks.add(new Block(index, i, i * BtUtils.BLOCK_SIZE,
-						last_block_size, true));
+				blocks.add(new Block(index, i, i * BtUtils.BLOCK_SIZE, last_block_size, true));
 			} else {
-				blocks.add(new Block(index, i, i * BtUtils.BLOCK_SIZE,
-						BtUtils.BLOCK_SIZE, false));
+				blocks.add(new Block(index, i, i * BtUtils.BLOCK_SIZE, BtUtils.BLOCK_SIZE, false));
 			}
 		}
 
@@ -125,9 +122,7 @@ public class Piece {
 	@Override
 	public boolean equals(Object object) {
 		if (object.getClass() == Piece.class) {
-			return (((Piece) object).getIndex() == this.index
-					&& ((Piece) object).getSize() == this.size && ((Piece) object)
-						.getOffset() == this.offset);
+			return (((Piece) object).getIndex() == this.index && ((Piece) object).getSize() == this.size && ((Piece) object).getOffset() == this.offset);
 		}
 		return false;
 	}
@@ -304,9 +299,7 @@ public class Piece {
 		ByteBuffer parser = ByteBuffer.wrap(message);
 		byte message_id = parser.get();
 		if (message_id != BtUtils.PIECE_ID) {
-			throw new BtException(
-					"Message was not a piece message, message id: "
-							+ (int) message_id);
+			throw new BtException("Message was not a piece message, message id: " + (int) message_id);
 		}
 		int piece_index = parser.getInt();
 		if (piece_index != this.index) {
@@ -319,8 +312,7 @@ public class Piece {
 		 */
 		int block_offset = parser.getInt();
 		if (block_offset % BtUtils.BLOCK_SIZE != 0) {
-			throw new BtException(
-					"block offset does not reslove to a valid block index");
+			throw new BtException("block offset does not reslove to a valid block index");
 		}
 		int block_index = block_offset / BtUtils.BLOCK_SIZE;
 		Block block = blocks.get(block_index);

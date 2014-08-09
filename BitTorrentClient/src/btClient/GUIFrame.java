@@ -3,6 +3,9 @@ package btClient;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
@@ -21,7 +24,6 @@ import javax.swing.JTable;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
 
 import java.awt.Dimension;
 
@@ -34,6 +36,19 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 	private JTable torrentTable;
 
 	public GUIFrame() {
+
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (UnsupportedLookAndFeelException e) {
+			e.printStackTrace();
+		}
+
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setMinimumSize(new Dimension(400, 300));
 		setPreferredSize(new Dimension(600, 800));
@@ -63,21 +78,15 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		JButton stopTorrentButton = new JButton("Stop Torrent");
 		stopTorrentButton.addActionListener(this);
 		panel_1.add(stopTorrentButton);
-		
+
 		JScrollPane scrollPane = new JScrollPane();
 		splitPane.setRightComponent(scrollPane);
-		
+
 		torrentTable = new JTable();
-		torrentTable.setModel(new DefaultTableModel(
-			new Object[][] {
-			},
-			new String[] {
-				"File Name", "Progress", "Status"
-			}
-		) {
-			Class[] columnTypes = new Class[] {
-				String.class, Object.class, String.class
-			};
+		torrentTable.setRowHeight(30);
+		torrentTable.setModel(new DefaultTableModel(new Object[][] {}, new String[] { "File Name", "Progress", "Status" }) {
+			Class[] columnTypes = new Class[] { String.class, Object.class, String.class };
+
 			public Class getColumnClass(int columnIndex) {
 				return columnTypes[columnIndex];
 			}
@@ -152,47 +161,39 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		}
 	}
 
-	private void addTorrent() throws FileNotFoundException, BencodingException,
-			IOException {
-		File torrentInfo = null, file = null;
-		FileFilter filter = new FileNameExtensionFilter("Torrent File",
-				"torrent");
+	private void addTorrent() throws FileNotFoundException, BencodingException, IOException {
+		TorrentInfo torrentInfo = null;
+		File file = null;
+		FileFilter filter = new FileNameExtensionFilter("Torrent File", "torrent");
 		JFileChooser fc = new JFileChooser();
 		//fc.addChoosableFileFilter(filter);
 		fc.setFileFilter(filter);
 		// Prompt user for torrent file
 		int returnVal = fc.showOpenDialog(this);
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
-			torrentInfo = fc.getSelectedFile();
+			torrentInfo = new TorrentInfo(BtUtils.getFileBytes(fc.getSelectedFile()));
 		} else {
 			return;
 		}
 		fc.removeChoosableFileFilter(filter);
 		// prompt user for save location
+		fc.setSelectedFile(new File(torrentInfo.file_name));
 		returnVal = fc.showSaveDialog(this);
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
 			file = fc.getSelectedFile();
 		} else {
 			return;
 		}
-		ActiveTorrent torrent = new ActiveTorrent(new TorrentInfo(BtUtils.getFileBytes(torrentInfo)), file);
-		torrents.add(torrent);
-		Object [] row = new Object [3];
-		row[0] = (Object)file.getName();
-		row[1] = (Object)torrent.getProgressBar();
-		row[2] = (Object)torrent.getStatus().toString();
-		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
-		torrent.setGuiIndex(model.getRowCount());
-		model.addRow(row);
-		
+		ActiveTorrent torrent = new ActiveTorrent(torrentInfo, file);
+		addActiveTorrent(torrent);
 	}
 
 	private void removeTorrent() throws IOException, BtException, InterruptedException {
 		int row = torrentTable.getSelectedRow();
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		String fileName = (String) model.getValueAt(row, 0);
-		for(ActiveTorrent torrent : torrents){
-			if(fileName.equals(torrent.getFileName())){
+		for (ActiveTorrent torrent : torrents) {
+			if (fileName.equals(torrent.getFileName())) {
 				torrent.stop();
 				torrents.remove(torrent);
 				break;
@@ -203,9 +204,9 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 
 	private void startTorrent() throws IOException, BtException {
 		int row = torrentTable.getSelectedRow();
-		for(ActiveTorrent torrent : torrents){
-			if(torrent.getGuiIndex() == row){
-				torrent.start();
+		for (ActiveTorrent torrent : torrents) {
+			if (torrent.getGuiIndex() == row) {
+				new Thread(torrent).start();
 				break;
 			}
 		}
@@ -213,19 +214,43 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 
 	private void stopTorrent() throws InterruptedException, BtException {
 		int row = torrentTable.getSelectedRow();
-		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
-		for(ActiveTorrent torrent : torrents){
-			if(torrent.getGuiIndex() == row){
+		for (ActiveTorrent torrent : torrents) {
+			if (torrent.getGuiIndex() == row) {
 				torrent.stop();
 				break;
 			}
 		}
 	}
-	
-	private void updateStatus(){
+
+	private void updateStatus() {
+		JProgressBar progressBar = null;
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
-		for(ActiveTorrent torrent : torrents){
-			model.setValueAt((Object)torrent.getStatus().toString(), torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_STATUS_COLUMN);
+		for (ActiveTorrent torrent : torrents) {
+			model.setValueAt((Object) torrent.getStatus().toString(), torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_STATUS_COLUMN);
+			progressBar = (JProgressBar) model.getValueAt(torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_PROGRESS_COLUMN);
+			progressBar.setValue(torrent.getPercentComplete());
+			progressBar.repaint();
+			progressBar.validate();
 		}
+	}
+	
+	public void addActiveTorrent(ActiveTorrent torrent) {
+		torrents.add(torrent);
+		JProgressBar progressBar = new JProgressBar(0,100);
+		progressBar.setIndeterminate(true);
+		progressBar.setMinimumSize(new Dimension(10,10));
+		progressBar.setAlignmentX((float) 0.5);
+		progressBar.setAlignmentY((float) 0.5);
+		progressBar.setValue(0);
+		progressBar.setStringPainted(true);
+		progressBar.setVisible(true);
+		progressBar.validate();
+		Object[] row = new Object[3];
+		row[0] = (Object) torrent.getFileName();
+		row[1] = (Object) progressBar;
+		row[2] = (Object) torrent.getStatus().toString();
+		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
+		torrent.setGuiIndex(model.getRowCount());
+		model.addRow(row);
 	}
 }

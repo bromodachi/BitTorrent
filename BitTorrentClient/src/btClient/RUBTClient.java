@@ -21,7 +21,9 @@ import java.io.IOException;
  * @author Cody Goodman & Conrado Uraga
  *
  */
-public class RUBTClient implements ActionListener {
+public class RUBTClient {
+	private static TorrentInfo torrentInfo = null;
+	private static File saveFile = null;
 
 	/**
 	 * This is the main method that is called upon program startup, this method
@@ -37,22 +39,12 @@ public class RUBTClient implements ActionListener {
 	 * @throws BencodingException
 	 * @throws InterruptedException
 	 */
-	public static void main (String[] args) throws IOException,
-			BencodingException, InterruptedException {
-
-		// Step 1 - Take the command line arguments
-		if (!validateArgs(args)) {
-			return;
-		}
+	public static void main(String[] args) throws IOException, BencodingException, InterruptedException {
 		GUIFrame gui = new GUIFrame();
+		if (validateArgs(args)) {
+			gui.addActiveTorrent(new ActiveTorrent(torrentInfo, saveFile));
+		}
 		gui.run();
-		
-/*		try {
-			new ActiveTorrent(new TorrentInfo(BtUtils.getFileBytes(new File(args[0]))), new File(args[1])).start();
-		} catch (BtException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
 
 		// temporary testing code
 
@@ -72,25 +64,30 @@ public class RUBTClient implements ActionListener {
 		// The name of the torrent file to load, and the name to the resulting
 		// file to save-as.
 		if (args.length != 2) {
-			System.err.println("Incorrect arguments. "
-					+ "Need 'somefile.torrent' 'picture.jpg'");
+			System.err.println("Incorrect arguments. " + "Need 'somefile.torrent' 'picture.jpg'");
 			return false;
 		}
 
 		// Validating if arg[0] is a correct .torrent file extension
-		String torrentChecker = args[0].substring(args[0].lastIndexOf(".") + 1,
-				args[0].length());
+		String torrentChecker = args[0].substring(args[0].lastIndexOf(".") + 1, args[0].length());
 		if (!(torrentChecker.equals("torrent"))) {
 			System.err.println("Not a valid .torrent file, exiting program.");
 			return false;
 		}
+
+		try {
+			torrentInfo = new TorrentInfo(BtUtils.getFileBytes(new File(args[0])));
+		} catch (BencodingException e) {
+			return false;
+		}
 		// check that a new file can be created with the second argument
+		saveFile = new File(args[1]);
+		if (!saveFile.createNewFile()) {
+			if (!saveFile.exists()) {
+				return false;
+			}
+		}
+
 		return true;
 	}// END validateArgs
-
-	@Override
-	public void actionPerformed(ActionEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
 }
