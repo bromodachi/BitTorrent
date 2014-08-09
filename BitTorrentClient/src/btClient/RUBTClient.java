@@ -9,6 +9,7 @@ package btClient;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -20,7 +21,9 @@ import java.io.IOException;
  * @author Cody Goodman & Conrado Uraga
  *
  */
-public class RUBTClient implements ActionListener {
+public class RUBTClient {
+	private static TorrentInfo torrentInfo = null;
+	private static File saveFile = null;
 
 	/**
 	 * This is the main method that is called upon program startup, this method
@@ -37,19 +40,11 @@ public class RUBTClient implements ActionListener {
 	 * @throws InterruptedException
 	 */
 	public static void main(String[] args) throws IOException, BencodingException, InterruptedException {
-
-		// Step 1 - Take the command line arguments
-		if (!validateArgs(args)) {
-			return;
-		}
 		GUIFrame gui = new GUIFrame();
+		if (validateArgs(args)) {
+			gui.addActiveTorrent(new ActiveTorrent(torrentInfo, saveFile));
+		}
 		gui.run();
-
-		/*
-		 * try { new ActiveTorrent(new TorrentInfo(BtUtils.getFileBytes(new
-		 * File(args[0]))), new File(args[1])).start(); } catch (BtException e)
-		 * { // TODO Auto-generated catch block e.printStackTrace(); }
-		 */
 
 		// temporary testing code
 
@@ -79,13 +74,20 @@ public class RUBTClient implements ActionListener {
 			System.err.println("Not a valid .torrent file, exiting program.");
 			return false;
 		}
+
+		try {
+			torrentInfo = new TorrentInfo(BtUtils.getFileBytes(new File(args[0])));
+		} catch (BencodingException e) {
+			return false;
+		}
 		// check that a new file can be created with the second argument
+		saveFile = new File(args[1]);
+		if (!saveFile.createNewFile()) {
+			if (!saveFile.exists()) {
+				return false;
+			}
+		}
+
 		return true;
 	}// END validateArgs
-
-	@Override
-	public void actionPerformed(ActionEvent e) {
-		// TODO Auto-generated method stub
-
-	}
 }

@@ -13,7 +13,6 @@ public class ChokeHandler extends TimerTask {
 	private ActiveTorrent torrent;
 
 	public ChokeHandler(ActiveTorrent torrent) {
-		System.err.println("Created Choke handler");
 		this.peers = torrent.getPeerList();
 		this.torrent = torrent;
 	}
@@ -24,7 +23,6 @@ public class ChokeHandler extends TimerTask {
 		switch (torrent.getStatus()) {
 		// If torrent is active (downloading) choke worst uploader
 		case Active:
-			System.err.println("switch hit active");
 			// if (torrent.getUnchokedPeerCount() >= BtUtils.MAX_UNCHOKED_PEERS)
 			// {
 			try {
@@ -37,7 +35,6 @@ public class ChokeHandler extends TimerTask {
 			break;
 		// if torrent is seeding then choke worst downloader
 		case Seeding:
-			System.err.println("switch hit seeding");
 			if (torrent.getUnchokedPeerCount() >= BtUtils.MAX_UNCHOKED_PEERS) {
 				try {
 					chokeWorstDownloader();
@@ -49,7 +46,6 @@ public class ChokeHandler extends TimerTask {
 			break;
 		// all other cases do nothing
 		default:
-			System.err.println("switch hit default");
 			return;
 
 		}
@@ -74,12 +70,10 @@ public class ChokeHandler extends TimerTask {
 	 * @throws IOException
 	 */
 	private void chokeWorstUploader() throws IOException {
-		System.err.println("In choke worst uploader");
 		int worst_upload = Integer.MAX_VALUE;
 		Peer worst_peer = null;
 		synchronized (peers) {
 			for (Peer peer : peers) {
-				System.err.println(peer.getPeer_id() + " uploaded " + peer.getUploaded() + " Interesting" + peer.isInteresting());
 				if (peer.getUploaded() < worst_upload && !peer.isChoked() && peer.isConnected() && !peer.isClosed()) {
 					worst_upload = peer.getUploaded();
 					worst_peer = peer;
@@ -94,8 +88,6 @@ public class ChokeHandler extends TimerTask {
 		worst_peer.sendChoke();
 		worst_peer.setChoked(true);
 		torrent.decrementUnchokedPeerCount();
-		System.err.println("Choked worst uploader peer " + worst_peer.getPeer_id());
-
 	}
 
 	/**
@@ -105,12 +97,10 @@ public class ChokeHandler extends TimerTask {
 	 * @throws IOException
 	 */
 	private void chokeWorstDownloader() throws IOException {
-		System.err.println("In choke worst downloader");
 		int worst_download = Integer.MAX_VALUE;
 		Peer worst_peer = null;
 		synchronized (peers) {
 			for (Peer peer : peers) {
-				System.err.println(peer.getPeer_id() + " downloaded " + peer.getDownloaded());
 				if (peer.getDownloaded() < worst_download && !peer.isChoked() && peer.isConnected() && !peer.isClosed()) {
 					worst_download = peer.getDownloaded();
 					worst_peer = peer;
@@ -125,8 +115,6 @@ public class ChokeHandler extends TimerTask {
 		worst_peer.sendChoke();
 		worst_peer.setChoked(true);
 		torrent.decrementUnchokedPeerCount();
-
-		System.err.println("Choked worst downloader peer " + worst_peer.getPeer_id());
 	}
 
 	/**
@@ -143,7 +131,6 @@ public class ChokeHandler extends TimerTask {
 				if (peer.isChoked() && peer.isConnected() && !peer.isClosed()) {
 					if ((torrent.getStatus() == Status.Active && peer.isInteresting()) || (torrent.getStatus() == Status.Seeding && peer.isInterested())) {
 						choked_peers.add(peer);
-						System.err.println("ADDED peer to unchoke list " + peer.getPeer_id() + " " + peer.getIP());
 					}
 				}
 			}
@@ -158,7 +145,6 @@ public class ChokeHandler extends TimerTask {
 		peer.sendUnchoke();
 		peer.setChoked(false);
 		torrent.incrementUnchokedPeerCount();
-		System.err.println("Unchoked peer " + peer.getPeer_id() + " " + peer.getIP());
 	}
 
 }

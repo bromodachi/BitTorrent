@@ -96,8 +96,8 @@ public class ActiveTorrent implements Runnable {
 		progressBar.setValue(getPercentComplete());
 		progressBar.setVisible(true);
 		gui_index = -1;
-		status = Status.Stopped;
 		unchoked_peer_count = 0;
+		updateStatus();
 	}
 
 	/* =================== GETTERS ========================= */
@@ -105,6 +105,11 @@ public class ActiveTorrent implements Runnable {
 		return pieces.size();
 	}
 
+	/**
+	 * Gets the name of the torrent's save file
+	 * 
+	 * @return file name
+	 */
 	public String getFileName() {
 		return file.getName();
 	}
@@ -113,6 +118,10 @@ public class ActiveTorrent implements Runnable {
 		return progressBar;
 	}
 
+	/**
+	 * 
+	 * @return The integer index of this active torrent in the GUI torrent table
+	 */
 	public int getGuiIndex() {
 		return gui_index;
 	}
@@ -167,12 +176,14 @@ public class ActiveTorrent implements Runnable {
 	 */
 	public boolean isAlive() {
 		boolean isalive = false;
-		for (Thread thread : threads) {
-			if (thread.isAlive()) {
-				//System.err.println(thread.getName() + " is Alive");
-				isalive = true;
-			} else {
-				//System.err.println(thread.getName() + " is dead");
+		synchronized (threads) {
+			for (Thread thread : threads) {
+				if (thread.isAlive()) {
+					//System.err.println(thread.getName() + " is Alive");
+					isalive = true;
+				} else {
+					//System.err.println(thread.getName() + " is dead");
+				}
 			}
 		}
 		return isalive;
@@ -229,7 +240,6 @@ public class ActiveTorrent implements Runnable {
 				throw new BtException("Failed to create file");
 			}
 		}
-
 		// Send tracker started message
 		communicationTracker.CommunicateWithTracker("started", getBytesCompleted());
 		peers = communicationTracker.getPeersList();
@@ -237,27 +247,35 @@ public class ActiveTorrent implements Runnable {
 		// create a new MessageHandler and thread for each peer
 		synchronized (peers) {
 			for (Peer peer : peers) {
-				// Connect only to the specified IP addresses as for the
-				// assignment specification
+				// Connect only to the specified IP addresses as for the assignment specification
 				if (peer.getIP().equals("128.6.171.130") || peer.getIP().equals("128.6.171.131")) {
-					// Create MessageHandler and add to message_handlers array
-					// list
+
+					// Create MessageHandler and add to message_handlers array list
 					MessageHandler messageHandler = new MessageHandler(this, peer);
-					message_handlers.add(messageHandler);
-					// create thread from message handler and add it to the
-					// array
-					// list
-					Thread thread = new Thread(messageHandler);
-					threads.add(thread);
-					thread.start();
+					synchronized (message_handlers) {
+						message_handlers.add(messageHandler);
+					}
+
+					// create thread from message handler and add it to the array list
+					synchronized (threads) {
+						Thread thread = new Thread(messageHandler);
+						threads.add(thread);
+						thread.start();
+					}
 				}
 			}
 		}
-		// setup timer tasks
-
-		// create listener for connecting peers
-
-		// Thread thread = new Thread(this); thread.start();
+		// create and start timer tasks
+		timer = new Timer();
+		timer.schedule(new ChokeHandler(this), 5000, BtUtils.CHOKE_INTERVAL);
+		timer.schedule(new KeepAlive(this), BtUtils.KEEP_ALIVE_INTERVAL, BtUtils.KEEP_ALIVE_INTERVAL);
+		if (communicationTracker.getMinInterval() != 0) {
+			timer.schedule(new UpdateTracker(this), 10000, communicationTracker.getMinInterval() * 1000);
+		} else if ((communicationTracker.getInterval() / 2) > BtUtils.MAX_UPDATE_INTERVAL) {
+			timer.schedule(new UpdateTracker(this), BtUtils.MAX_UPDATE_INTERVAL * 1000, BtUtils.MAX_UPDATE_INTERVAL * 1000);
+		} else {
+			timer.schedule(new UpdateTracker(this), communicationTracker.getInterval() * 1000, communicationTracker.getInterval() * 1000);
+		}
 
 	}
 
@@ -268,21 +286,11 @@ public class ActiveTorrent implements Runnable {
 		} catch (IOException | BtException e1) {
 			e1.printStackTrace();
 		}
-		// start timer tasks
-		chokeHandler = new ChokeHandler(this);
-		timer = new Timer();
-		timer.schedule(chokeHandler, 5000, BtUtils.CHOKE_INTERVAL);
+
 		updateStatus();
 		while (status == Status.Seeding || status == Status.Active) {
 			progressBar.setValue(getPercentComplete());
 			updateStatus();
-			System.err.println("Current number of unchoked peers" + getUnchokedPeerCount());
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 		}
 		updateStatus();
 
@@ -291,17 +299,27 @@ public class ActiveTorrent implements Runnable {
 	}
 
 	public void stop() throws BtException, InterruptedException {
-		for (MessageHandler handler : message_handlers) {
-			handler.kill();
+		synchronized (message_handlers) {
+			for (MessageHandler handler : message_handlers) {
+				handler.kill();
+			}
 		}
-		for (Thread thread : threads) {
-			thread.join();
-			System.out.println(thread.getName() + "joined");
+		synchronized (peers) {
+			for (Peer peer : peers) {
+				peer.disconnect();
+				peer.closeEverything();
+			}
+		}
+		synchronized (threads) {
+			for (Thread thread : threads) {
+				thread.join();
+				System.err.println(thread.getName() + "joined");
+			}
 		}
 		threads.clear();
 
 		communicationTracker.CommunicateWithTracker("stopped", getBytesCompleted());
-		System.err.println("Should be dead");
+		System.err.println("Everything Should be dead");
 		updateStatus();
 	}
 
@@ -356,6 +374,26 @@ public class ActiveTorrent implements Runnable {
 
 	public ByteBuffer getClientID() {
 		return communicationTracker.getClientID();
+	}
+
+	public CommunicationTracker getCommunicarionTracker() {
+		return communicationTracker;
+	}
+
+	public synchronized void addPeerToList(Peer peer) {
+		System.err.println("added peer " + peer.getPeer_id());
+		MessageHandler handler = new MessageHandler(this, peer);
+		synchronized (message_handlers) {
+			message_handlers.add(handler);
+		}
+		synchronized (threads) {
+			Thread thread = new Thread(handler);
+			threads.add(thread);
+			thread.start();
+		}
+		synchronized (peers) {
+			this.peers.add(peer);
+		}
 	}
 
 }

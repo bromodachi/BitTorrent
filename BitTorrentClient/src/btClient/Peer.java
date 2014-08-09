@@ -78,7 +78,7 @@ public class Peer {
 	@Override
 	public boolean equals(Object object) {
 		if (object.getClass() == this.getClass()) {
-			if (((Peer) object).getPeer_id() == this.getPeer_id() && ((Peer) object).getIP().equals(this.getIP())) {
+			if (((Peer) object).getPeer_id().equals(this.getPeer_id()) && ((Peer) object).getIP().equals(this.getIP())) {
 				return true;
 			}
 		}

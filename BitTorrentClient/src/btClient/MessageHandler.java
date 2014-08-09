@@ -214,7 +214,7 @@ public class MessageHandler implements Runnable {
 				peer.closeEverything();
 				return;
 			} catch (IOException | InterruptedException | BtException e) {
-				e.printStackTrace();
+				// This can occur on purpose when GUI forces all peers to close
 				return;
 			}
 

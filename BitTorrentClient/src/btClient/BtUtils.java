@@ -165,6 +165,12 @@ public class BtUtils {
 	 */
 	public static final int CHOKE_INTERVAL = 30000;
 	
+	public static final int MAX_UPDATE_INTERVAL = 180;
+	/**
+	 * Keep alive interval in milliseconds
+	 */
+	public static final long KEEP_ALIVE_INTERVAL = 120000;
+	
 	
 	
 	public static enum Status {

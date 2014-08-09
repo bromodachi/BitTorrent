@@ -183,15 +183,7 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 			return;
 		}
 		ActiveTorrent torrent = new ActiveTorrent(torrentInfo, file);
-		torrents.add(torrent);
-		Object[] row = new Object[3];
-		row[0] = (Object) file.getName();
-		row[1] = (Object) torrent.getProgressBar();
-		row[2] = (Object) torrent.getStatus().toString();
-		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
-		torrent.setGuiIndex(model.getRowCount());
-		model.addRow(row);
-
+		addActiveTorrent(torrent);
 	}
 
 	private void removeTorrent() throws IOException, BtException, InterruptedException {
@@ -233,5 +225,16 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		for (ActiveTorrent torrent : torrents) {
 			model.setValueAt((Object) torrent.getStatus().toString(), torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_STATUS_COLUMN);
 		}
+	}
+	
+	public void addActiveTorrent(ActiveTorrent torrent) {
+		torrents.add(torrent);
+		Object[] row = new Object[3];
+		row[0] = (Object) torrent.getFileName();
+		row[1] = (Object) torrent.getProgressBar();
+		row[2] = (Object) torrent.getStatus().toString();
+		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
+		torrent.setGuiIndex(model.getRowCount());
+		model.addRow(row);
 	}
 }
