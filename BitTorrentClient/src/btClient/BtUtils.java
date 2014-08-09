@@ -170,6 +170,7 @@ public class BtUtils {
 	 * Keep alive interval in milliseconds
 	 */
 	public static final long KEEP_ALIVE_INTERVAL = 120000;
+	public static final int TORRENT_TABLE_PROGRESS_COLUMN = 1;
 	
 	
 	

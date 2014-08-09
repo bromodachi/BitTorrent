@@ -3,6 +3,7 @@ package btClient;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -82,6 +83,7 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		splitPane.setRightComponent(scrollPane);
 
 		torrentTable = new JTable();
+		torrentTable.setRowHeight(30);
 		torrentTable.setModel(new DefaultTableModel(new Object[][] {}, new String[] { "File Name", "Progress", "Status" }) {
 			Class[] columnTypes = new Class[] { String.class, Object.class, String.class };
 
@@ -221,17 +223,31 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 	}
 
 	private void updateStatus() {
+		JProgressBar progressBar = null;
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		for (ActiveTorrent torrent : torrents) {
 			model.setValueAt((Object) torrent.getStatus().toString(), torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_STATUS_COLUMN);
+			progressBar = (JProgressBar) model.getValueAt(torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_PROGRESS_COLUMN);
+			progressBar.setValue(torrent.getPercentComplete());
+			progressBar.repaint();
+			progressBar.validate();
 		}
 	}
 	
 	public void addActiveTorrent(ActiveTorrent torrent) {
 		torrents.add(torrent);
+		JProgressBar progressBar = new JProgressBar(0,100);
+		progressBar.setIndeterminate(true);
+		progressBar.setMinimumSize(new Dimension(10,10));
+		progressBar.setAlignmentX((float) 0.5);
+		progressBar.setAlignmentY((float) 0.5);
+		progressBar.setValue(0);
+		progressBar.setStringPainted(true);
+		progressBar.setVisible(true);
+		progressBar.validate();
 		Object[] row = new Object[3];
 		row[0] = (Object) torrent.getFileName();
-		row[1] = (Object) torrent.getProgressBar();
+		row[1] = (Object) progressBar;
 		row[2] = (Object) torrent.getStatus().toString();
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		torrent.setGuiIndex(model.getRowCount());

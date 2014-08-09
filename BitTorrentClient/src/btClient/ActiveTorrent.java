@@ -50,11 +50,6 @@ public class ActiveTorrent implements Runnable {
 	 */
 	private boolean active;
 	/**
-	 * A Progress bar indicating the percentage of the file that has been
-	 * downloaded
-	 */
-	private JProgressBar progressBar;
-	/**
 	 * The row number that corresponds to this torrent in the GUI table
 	 */
 	private int gui_index;
@@ -91,10 +86,6 @@ public class ActiveTorrent implements Runnable {
 		message_handlers = new ArrayList<MessageHandler>();
 		active = false;
 		createPieces();
-		progressBar = new JProgressBar();
-		progressBar.setStringPainted(true);
-		progressBar.setValue(getPercentComplete());
-		progressBar.setVisible(true);
 		gui_index = -1;
 		unchoked_peer_count = 0;
 		updateStatus();
@@ -112,10 +103,6 @@ public class ActiveTorrent implements Runnable {
 	 */
 	public String getFileName() {
 		return file.getName();
-	}
-
-	public JProgressBar getProgressBar() {
-		return progressBar;
 	}
 
 	/**
@@ -289,7 +276,6 @@ public class ActiveTorrent implements Runnable {
 
 		updateStatus();
 		while (status == Status.Seeding || status == Status.Active) {
-			progressBar.setValue(getPercentComplete());
 			updateStatus();
 		}
 		updateStatus();
