@@ -74,8 +74,8 @@ public class Peer {
 		interesting = false;
 
 	}
-	
-	public Peer(String IP, String peer_id, Socket connection) throws IOException{
+
+	public Peer(String IP, String peer_id, Socket connection) throws IOException {
 		this.IP = IP;
 		this.peer_id = peer_id;
 		this.connection = connection;
@@ -286,9 +286,15 @@ public class Peer {
 	public void disconnect() {
 
 		try {
-			inputStream.close();
-			outputStream.close();
-			connection.close();
+			if (inputStream != null) {
+				inputStream.close();
+			}
+			if (outputStream != null) {
+				outputStream.close();
+			}
+			if (connection != null) {
+				connection.close();
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
