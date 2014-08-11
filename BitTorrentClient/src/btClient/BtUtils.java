@@ -21,10 +21,8 @@ public class BtUtils {
 	/**
 	 * Byte array representation of the Bit Torrent protocol handshake header
 	 */
-	public static final byte[] p2pHandshakeHeader = { (byte) 0x13, 'B', 'i',
-			't', 'T', 'o', 'r', 'r', 'e', 'n', 't', ' ', 'p', 'r', 'o', 't',
-			'o', 'c', 'o', 'l', (byte) 0, (byte) 0, (byte) 0, (byte) 0,
-			(byte) 0, (byte) 0, (byte) 0, (byte) 0 };
+	public static final byte[] p2pHandshakeHeader = { (byte) 0x13, 'B', 'i', 't', 'T', 'o', 'r', 'r', 'e', 'n', 't', ' ', 'p', 'r', 'o', 't', 'o', 'c', 'o',
+			'l', (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0 };
 	/**
 	 * number of bytes in the complete (header + info_hash + peer_id) Bit
 	 * torrent protocol handshake
@@ -110,8 +108,7 @@ public class BtUtils {
 	/**
 	 * 
 	 */
-	public static final byte[] MESSAGE_READ_ERROR = "failed to read message"
-			.getBytes();
+	public static final byte[] MESSAGE_READ_ERROR = "failed to read message".getBytes();
 	/**
 	 * The prefix for the peer specified on the rutgers sakai page (byte array)
 	 */
@@ -164,20 +161,31 @@ public class BtUtils {
 	 * The interval in milliseconds for which a peer should be choked/unchoked
 	 */
 	public static final int CHOKE_INTERVAL = 30000;
-	
+
 	public static final int MAX_UPDATE_INTERVAL = 180;
 	/**
 	 * Keep alive interval in milliseconds
 	 */
 	public static final long KEEP_ALIVE_INTERVAL = 120000;
+	/**
+	 * An integer indicating the position of the progress bar column in the gui
+	 * torrent table
+	 */
 	public static final int TORRENT_TABLE_PROGRESS_COLUMN = 1;
-	
-	
-	
+	/**
+	 * Integer indicating the offset of the Peer Id in a BitTorrent handshake
+	 * message
+	 */
+	public static final int HANDSHAKE_PEER_ID_OFFSET = 48;
+	/**
+	 * Length of a peer id used for the BitTorrent Protocol
+	 */
+	public static final int PEER_ID_LENGTH = 20;
+
 	public static enum Status {
 		Active, Seeding, Stopped, Starting, Complete
 	}
-	
+
 	/**
 	 * Returns the byte array of a file to be used with Bencoder2.java. The byte
 	 * array format is required as input to the Bencoder2 class. Requires jre7
@@ -189,13 +197,11 @@ public class BtUtils {
 	 * @return byte The torrent file represented as a byte array
 	 * @throws IOException
 	 */
-	public static byte[] getFileBytes(File torrentFile) throws IOException,
-			BencodingException {
+	public static byte[] getFileBytes(File torrentFile) throws IOException, BencodingException {
 
 		// Make sure the file exists and it's not a directory
 		if (!torrentFile.exists() || torrentFile.isDirectory()) {
-			System.err.println("Couldn't load the torrent file.  "
-					+ "Exiting program.");
+			System.err.println("Couldn't load the torrent file.  " + "Exiting program.");
 			System.exit(1);
 		}
 		Path filePath = torrentFile.toPath();

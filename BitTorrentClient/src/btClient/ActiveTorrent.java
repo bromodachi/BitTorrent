@@ -66,6 +66,14 @@ public class ActiveTorrent implements Runnable {
 	private Timer timer;
 
 	private ChokeHandler chokeHandler;
+	/**
+	 * The port that this active torrent listens for new connections on
+	 */
+	private int listeningPort;
+	/**
+	 * 
+	 */
+	private PeerConnectionListener peerConnectionListener = null;
 
 	/* =================== CONSTRUCTOR ========================== */
 	/**
@@ -252,6 +260,10 @@ public class ActiveTorrent implements Runnable {
 				}
 			}
 		}
+		// Create connection listener thread
+		peerConnectionListener  = new PeerConnectionListener(this, listeningPort);
+		new Thread(peerConnectionListener).start();
+		
 		// create and start timer tasks
 		timer = new Timer();
 		timer.schedule(new ChokeHandler(this), 5000, BtUtils.CHOKE_INTERVAL);
@@ -282,6 +294,8 @@ public class ActiveTorrent implements Runnable {
 
 		// clear timer tasks
 		timer.cancel();
+		// Kill peerConnectionListener
+		peerConnectionListener.setListening(false);
 	}
 
 	public void stop() throws BtException, InterruptedException {

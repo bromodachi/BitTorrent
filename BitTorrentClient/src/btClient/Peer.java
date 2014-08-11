@@ -26,10 +26,11 @@ import java.util.BitSet;
  */
 public class Peer {
 	private int interval, port;
-	private String IP, peer_id;
-	private Socket connection;
-	private DataInputStream inputStream;
-	private DataOutputStream outputStream;
+	private String IP;
+	private String peer_id;
+	private Socket connection = null;
+	private DataInputStream inputStream = null;
+	private DataOutputStream outputStream = null;
 	/**
 	 * The number of bytes that this peer has downloaded from the client
 	 */
@@ -56,7 +57,7 @@ public class Peer {
 	private boolean interesting;
 
 	/**
-	 * Creats a new Peer object with the given parameters
+	 * Creates a new unconnected Peer object with the given parameters
 	 * 
 	 * @param {@link#IP}
 	 * @param {@link#peer_id}
@@ -66,13 +67,26 @@ public class Peer {
 		this.IP = IP;
 		this.peer_id = peer_id;
 		this.port = port;
-		this.connection = null;
 		uploaded = 0;
 		downloaded = 0;
 		choked = true;
 		interested = false;
 		interesting = false;
 
+	}
+	
+	public Peer(String IP, String peer_id, Socket connection) throws IOException{
+		this.IP = IP;
+		this.peer_id = peer_id;
+		this.connection = connection;
+		this.port = connection.getPort();
+		inputStream = new DataInputStream(connection.getInputStream());
+		outputStream = new DataOutputStream(connection.getOutputStream());
+		uploaded = 0;
+		downloaded = 0;
+		choked = true;
+		interested = false;
+		interesting = false;
 	}
 
 	@Override
@@ -162,8 +176,8 @@ public class Peer {
 		this.port = port;
 	}
 
-	public void setIP(String iP) {
-		IP = iP;
+	public void setIP(String IP) {
+		this.IP = IP;
 	}
 
 	public void setPeer_id(String peer_id) {
