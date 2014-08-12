@@ -7,8 +7,6 @@
  */
 package btClient;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 
@@ -41,18 +39,15 @@ public class RUBTClient {
 	 */
 	public static void main(String[] args) throws IOException, BencodingException, InterruptedException {
 		GUIFrame gui = new GUIFrame();
-		if (validateArgs(args)) {
-			gui.addActiveTorrent(new ActiveTorrent(torrentInfo, saveFile));
-		}
 		gui.run();
-
-		// temporary testing code
+		if (validateArgs(args)) {
+			gui.addActiveTorrent(new ActiveTorrent(torrentInfo, saveFile, gui.getNextServerPort()));
+		}
 
 	}// END MAIN
 
 	/**
-	 * Validates the command line arguments to see if the parameters are good.
-	 * The program exits if the arguments are bad.
+	 * Checks the validity of command line arguments
 	 * 
 	 * @param args
 	 *            The command line arguments from the main method.
@@ -60,11 +55,11 @@ public class RUBTClient {
 	 * @throws IOException
 	 */
 	public static boolean validateArgs(String[] args) throws IOException {
-		// The main method requires two command line arguments:
-		// The name of the torrent file to load, and the name to the resulting
-		// file to save-as.
+		/*
+		 * The main method requires two command line arguments: The name of the
+		 * torrent file to load, and the name to the resulting file to save-as.
+		 */
 		if (args.length != 2) {
-			System.err.println("Incorrect arguments. " + "Need 'somefile.torrent' 'picture.jpg'");
 			return false;
 		}
 

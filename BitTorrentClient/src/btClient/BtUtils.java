@@ -181,7 +181,13 @@ public class BtUtils {
 	 * Length of a peer id used for the BitTorrent Protocol
 	 */
 	public static final int PEER_ID_LENGTH = 20;
-
+	
+	public static final int STARTING_LISTENING_PORT = 16800;
+	/**
+	 * Enum indicating the current state of a torrent
+	 * @author Cody
+	 *
+	 */
 	public static enum Status {
 		Active, Seeding, Stopped, Starting, Complete
 	}

@@ -34,7 +34,11 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 	private ArrayList<ActiveTorrent> torrents;
 	private GUIFrame frame = this;
 	private JTable torrentTable;
+	private int server_port = BtUtils.STARTING_LISTENING_PORT;
 
+	/**
+	 * Creates a new Exceptional BitTorrent Client GUI
+	 */
 	public GUIFrame() {
 
 		try {
@@ -85,23 +89,28 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		torrentTable = new JTable();
 		torrentTable.setRowHeight(30);
 		torrentTable.setModel(new DefaultTableModel(new Object[][] {}, new String[] { "File Name", "Progress", "Status" }) {
+			@SuppressWarnings("rawtypes")
 			Class[] columnTypes = new Class[] { String.class, Object.class, String.class };
 
+			@SuppressWarnings({ "unchecked", "rawtypes" })
 			public Class getColumnClass(int columnIndex) {
 				return columnTypes[columnIndex];
 			}
 		});
+
 		scrollPane.setViewportView(torrentTable);
 
+		// Set closing behavior, stop all torrent activity when window closes
 		this.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override
 			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
 				frame.setVisible(false);
+				// Stop each active torrent
 				for (ActiveTorrent torrent : torrents) {
 					try {
 						torrent.stop();
-					} catch (BtException | InterruptedException e) {
-						// do nothing
+					} catch (InterruptedException | BtException e) {
+						e.printStackTrace();
 					}
 				}
 			}
@@ -112,7 +121,7 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 	public void run() {
 		this.setVisible(true);
 		this.requestFocus();
-
+		// Continuously update the status of active torrents while GUI is open
 		while (true) {
 			updateStatus();
 			validate();
@@ -161,13 +170,22 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		}
 	}
 
+	/**
+	 * Prompts user for .torrent file and save file locations and create a new
+	 * ActiveTorrent object to be added
+	 * 
+	 * @throws FileNotFoundException
+	 * @throws BencodingException
+	 * @throws IOException
+	 */
 	private void addTorrent() throws FileNotFoundException, BencodingException, IOException {
 		TorrentInfo torrentInfo = null;
 		File file = null;
+		// Create file chooser and torrent file filter
 		FileFilter filter = new FileNameExtensionFilter("Torrent File", "torrent");
 		JFileChooser fc = new JFileChooser();
-		//fc.addChoosableFileFilter(filter);
 		fc.setFileFilter(filter);
+
 		// Prompt user for torrent file
 		int returnVal = fc.showOpenDialog(this);
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
@@ -176,6 +194,7 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 			return;
 		}
 		fc.removeChoosableFileFilter(filter);
+
 		// prompt user for save location
 		fc.setSelectedFile(new File(torrentInfo.file_name));
 		returnVal = fc.showSaveDialog(this);
@@ -184,10 +203,19 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		} else {
 			return;
 		}
-		ActiveTorrent torrent = new ActiveTorrent(torrentInfo, file);
+
+		// Create new ActiveTorrent object and add it to the table
+		ActiveTorrent torrent = new ActiveTorrent(torrentInfo, file, getNextServerPort());
 		addActiveTorrent(torrent);
 	}
 
+	/**
+	 * Removes the selected {@link ActiveTorrent} from the torrent table
+	 * 
+	 * @throws IOException
+	 * @throws BtException
+	 * @throws InterruptedException
+	 */
 	private void removeTorrent() throws IOException, BtException, InterruptedException {
 		int row = torrentTable.getSelectedRow();
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
@@ -202,6 +230,13 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		model.removeRow(row);
 	}
 
+	/**
+	 * Starts the {@link ActiveTorrent} object associated with the selected row
+	 * of the Torrent Table
+	 * 
+	 * @throws IOException
+	 * @throws BtException
+	 */
 	private void startTorrent() throws IOException, BtException {
 		int row = torrentTable.getSelectedRow();
 		for (ActiveTorrent torrent : torrents) {
@@ -212,6 +247,12 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		}
 	}
 
+	/**
+	 * Stops the selected {@link ActiveTorrent}
+	 * 
+	 * @throws InterruptedException
+	 * @throws BtException
+	 */
 	private void stopTorrent() throws InterruptedException, BtException {
 		int row = torrentTable.getSelectedRow();
 		for (ActiveTorrent torrent : torrents) {
@@ -222,6 +263,10 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		}
 	}
 
+	/**
+	 * Updates the status of all the {@link ActiveTorrents} in the GUI Torrent
+	 * Table
+	 */
 	private void updateStatus() {
 		JProgressBar progressBar = null;
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
@@ -233,12 +278,17 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 			progressBar.validate();
 		}
 	}
-	
+
+	/**
+	 * Adds the given {@link ActiveTorrent} object to the GUI's Torrent Table
+	 * 
+	 * @param torrent The {@link ActiveTorrent} to be added to the torrent table
+	 */
 	public void addActiveTorrent(ActiveTorrent torrent) {
 		torrents.add(torrent);
-		JProgressBar progressBar = new JProgressBar(0,100);
+		JProgressBar progressBar = new JProgressBar(0, 100);
 		progressBar.setIndeterminate(true);
-		progressBar.setMinimumSize(new Dimension(10,10));
+		progressBar.setMinimumSize(new Dimension(10, 10));
 		progressBar.setAlignmentX((float) 0.5);
 		progressBar.setAlignmentY((float) 0.5);
 		progressBar.setValue(0);
@@ -252,5 +302,9 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		torrent.setGuiIndex(model.getRowCount());
 		model.addRow(row);
+	}
+
+	public synchronized int getNextServerPort() {
+		return server_port++;
 	}
 }

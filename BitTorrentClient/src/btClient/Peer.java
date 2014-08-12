@@ -333,7 +333,7 @@ public class Peer {
 		// connection.setKeepAlive(true);
 
 		if (!isSameHash(info_hash.array(), response)) {
-			closeEverything();
+			disconnect();
 			System.err.println("FATAL ERROR: Tracker info_hash did not match file info_hash");
 			return false;
 		}
@@ -361,27 +361,6 @@ public class Peer {
 		}
 		System.err.println("Verfication fail (info_hash mismatch)...connection will drop now");
 		return false;
-	}
-
-	/**
-	 * Closes all streams and connections
-	 */
-	public void closeEverything() {
-		try {
-			if (inputStream != null) {
-				inputStream.close();
-			}
-			if (outputStream != null) {
-				outputStream.close();
-			}
-			if (connection != null) {
-				connection.close();
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
 	}
 
 	/**
