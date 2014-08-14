@@ -57,14 +57,15 @@ public class ActiveTorrent implements Runnable {
 	private int unchoked_peer_count;
 
 	private Timer timer;
+
 	/**
 	 * The port that this active torrent listens for new connections on
 	 */
-	private int server_port;
+	//private int server_port;
 	/**
 	 * 
 	 */
-	private PeerConnectionListener peerConnectionListener = null;
+	//private PeerConnectionListener peerConnectionListener = null;
 
 	/* =================== CONSTRUCTOR ========================== */
 	/**
@@ -86,7 +87,7 @@ public class ActiveTorrent implements Runnable {
 		gui_index = -1;
 		unchoked_peer_count = 0;
 		updateStatus();
-		this.server_port = listeningPort;
+		//this.server_port = listeningPort;
 	}
 
 	/* =================== GETTERS ========================= */
@@ -174,6 +175,7 @@ public class ActiveTorrent implements Runnable {
 		}
 		return completed;
 	}
+
 	public ArrayList<Piece> getPieces() {
 		return pieces;
 	}
@@ -197,16 +199,13 @@ public class ActiveTorrent implements Runnable {
 	 */
 	public boolean isAlive() {
 		boolean isalive = false;
-		if(threads == null){
+		if (threads == null) {
 			return false;
 		}
 		synchronized (threads) {
 			for (Thread thread : threads) {
 				if (thread.isAlive()) {
-					//System.err.println(thread.getName() + " is Alive");
 					isalive = true;
-				} else {
-					//System.err.println(thread.getName() + " is dead");
 				}
 			}
 		}
@@ -247,7 +246,7 @@ public class ActiveTorrent implements Runnable {
 		this.unchoked_peer_count = unchoked_peer_count;
 	}
 
-	/* ======================== METHODS ========================= */
+	/* ========================== METHODS =========================== */
 
 	/**
 	 * Initializes and runs this {@link ActiveTorrent} object. Sends "started"
@@ -297,9 +296,11 @@ public class ActiveTorrent implements Runnable {
 				}
 			}
 		}
-		// Create connection listener thread
-		peerConnectionListener = new PeerConnectionListener(this, server_port);
-		new Thread(peerConnectionListener).start();
+		// Create connection listener thread (not fully working yet)
+		/*
+		 * peerConnectionListener = new PeerConnectionListener(this,
+		 * server_port); new Thread(peerConnectionListener).start();
+		 */
 
 		// create and start timer tasks
 		timer = new Timer();
@@ -337,7 +338,7 @@ public class ActiveTorrent implements Runnable {
 		// clear timer tasks
 		timer.cancel();
 		// Kill peerConnectionListener
-		peerConnectionListener.setListening(false);
+		//peerConnectionListener.setListening(false);
 	}
 
 	/**
@@ -345,37 +346,41 @@ public class ActiveTorrent implements Runnable {
 	 * for each {@link MessageHandler} associated with this torrent. Also
 	 * disconnects all associated {@link Peer} objects by calling
 	 * {@link Peer#disconnect()} and joins all MessageHandler threads then sends
-	 * a stopped message to the tracker.
+	 * a stopped message to the tracker and updates that ActiveTorrent's status.
 	 * 
 	 * @throws BtException
 	 * @throws InterruptedException
 	 */
 	public void stop() throws BtException, InterruptedException {
 		// Kill MessageHandlers
-		synchronized (message_handlers) {
-			for (MessageHandler handler : message_handlers) {
-				handler.kill();
+		if (message_handlers != null) {
+			synchronized (message_handlers) {
+				for (MessageHandler handler : message_handlers) {
+					handler.kill();
+				}
+				message_handlers = null;
 			}
-			message_handlers = null;
 		}
 		// Disconnect Peers
-		synchronized (peers) {
-			for (Peer peer : peers) {
-				peer.disconnect();
+		if (peers != null) {
+			synchronized (peers) {
+				for (Peer peer : peers) {
+					peer.disconnect();
+				}
+				peers = null;
 			}
-			peers = null;
 		}
 		// Join threads
-		synchronized (threads) {
-			for (Thread thread : threads) {
-				thread.join();
-				System.err.println(thread.getName() + "joined");
+		if (threads != null) {
+			synchronized (threads) {
+				for (Thread thread : threads) {
+					thread.join();
+				}
+				threads = null;
 			}
-			threads = null;
 		}
 		// Send "stopped" to tracker
 		communicationTracker.CommunicateWithTracker("stopped", getBytesCompleted());
-		System.err.println("Everything Should be dead");
 		updateStatus();
 	}
 
@@ -387,7 +392,6 @@ public class ActiveTorrent implements Runnable {
 	 *            ArrayList of piece objects
 	 * @param torrentInfo
 	 *            TorrentInfo object for the active download
-	 * @return
 	 * @throws FileNotFoundException
 	 */
 	private void createPieces() throws FileNotFoundException {
@@ -402,8 +406,10 @@ public class ActiveTorrent implements Runnable {
 			}
 		}
 	}
+
 	/**
 	 * Updates the status of this ActiveTorrent
+	 * 
 	 * @return
 	 */
 	private Status updateStatus() {
@@ -422,8 +428,13 @@ public class ActiveTorrent implements Runnable {
 		}
 		return status;
 	}
-	
 
+	/**
+	 * Adds a new peer to the peer list in a synchronized manner
+	 * 
+	 * @param peer
+	 *            new peer to be added
+	 */
 	public synchronized void addPeerToList(Peer peer) {
 		System.err.println("added peer " + peer.getPeer_id());
 		MessageHandler handler = new MessageHandler(this, peer);

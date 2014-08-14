@@ -21,6 +21,13 @@ public class PeerConnectionListener implements Runnable {
 
 	private boolean listening = false;
 
+	/**
+	 * Listens for peers attempting to connect to the client and adds them to
+	 * the peer list if connection is made and validated
+	 * 
+	 * @param torrent
+	 * @param port
+	 */
 	public PeerConnectionListener(ActiveTorrent torrent, int port) {
 		this.torrent = torrent;
 		this.port = port;

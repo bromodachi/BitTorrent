@@ -115,7 +115,9 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 			}
 		});
 	}
-
+	/**
+	 * Continuously calls {@link#updateStatus()}to update the status of all the active torrents
+	 */
 	@Override
 	public void run() {
 		this.setVisible(true);

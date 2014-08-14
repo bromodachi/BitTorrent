@@ -18,7 +18,6 @@ public class ChokeHandler extends TimerTask {
 	}
 
 	public void run() {
-		System.err.println("Running ChokeHandler task ");
 		/* Check status of torrent */
 		switch (torrent.getStatus()) {
 		// If torrent is active (downloading) choke worst uploader

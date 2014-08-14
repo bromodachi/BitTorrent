@@ -127,7 +127,6 @@ public class MessageHandler implements Runnable {
 		// While connected : communication loop
 		while (peer.isConnected() && !peer.isClosed()) {
 			if (killme) {
-				System.err.println(Thread.currentThread().getName() + " being killed");
 				peer.disconnect();
 				return;
 			}
@@ -184,21 +183,17 @@ public class MessageHandler implements Runnable {
 			}
 
 			// check if any pieces have been completed by other threads
-			System.out.println(Thread.currentThread().getName() + " Getting message from peer");
-
 			try {
 				handleMessage(peer.getMessage());
 			} catch (EOFException e) {
-				System.out.println(Thread.currentThread().getName() + " Received EOF disconnecting... ");
 				peer.disconnect();
 				return;
 			} catch (IOException | InterruptedException | BtException e) {
-				// This can occur on purpose when GUI forces all peers to close
+				// This can occur on purpose when GUI forces all peers to disconnect
 				return;
 			}
 
 		}
-		System.err.println(Thread.currentThread().getName() + " connection is lost");
 		// make sure all streams are closed
 		peer.disconnect();
 		// decrement peer counters to update rarity of pieces
@@ -206,7 +201,8 @@ public class MessageHandler implements Runnable {
 	}
 
 	/**
-	 * Identifies the given message and decides how it should be handled
+	 * Identifies the given message and calls the appropriate method to handle
+	 * it
 	 * 
 	 * @param message
 	 *            The message to be handled
@@ -215,40 +211,29 @@ public class MessageHandler implements Runnable {
 	 */
 	private void handleMessage(byte[] message) throws IOException, BtException {
 		if (message == null) {
-			System.err.println(Thread.currentThread().getName() + " Received null message");
 			return;
 		}
 		if (message.length == 0) {
-			System.out.println(Thread.currentThread().getName() + " Received message of length 0");
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			// Keep alive message
 			return;
 		}
 		switch (message[0]) {
 		case BtUtils.CHOKE_ID:
-			System.out.println(Thread.currentThread().getName() + " Received choke");
-			choked = true;
+			receiveChoke(message);
 			break;
 		case BtUtils.UNCHOKE_ID:
-			System.out.println(Thread.currentThread().getName() + " Received unchoke");
-			choked = false;
+			receiveUnchoke(message);
 			break;
 		case BtUtils.INTERESTED_ID:
-			System.out.println(Thread.currentThread().getName() + " Received Interested");
-			peer.setInterested(true);
-			System.out.println(Thread.currentThread().getName() + " Sent Unchoke");
+			receiveInterested(message);
 			break;
 		case BtUtils.UNINTERESTED_ID:
-			receiveInterested();
+			receiveUninterested(message);
 			break;
 		case BtUtils.HAVE_ID:
 			receiveHave(message);
 			break;
 		case BtUtils.BITFIELD_ID:
-			System.out.println(Thread.currentThread().getName() + " Received Bitfield");
 			receiveBitfield(message);
 			break;
 		case BtUtils.REQUEST_ID:
@@ -259,26 +244,57 @@ public class MessageHandler implements Runnable {
 			break;
 
 		default:
-			System.err.println("ERROR: received invalid message from peer");
 			wasted += message.length;
 		}
 	}
 
 	/* ================ RECEIVE MESSAGE METHODS ================== */
 	/**
-	 * Handles an incoming interested message, sets the peer's interested field
-	 * to true
+	 * Handles an incoming unchoke message, sets the client choke flag to false.
+	 * Given its own method in case the need arises to add more functionality.
+	 * 
+	 * @param message
 	 */
-	private void receiveInterested() {
-		System.out.println(Thread.currentThread().getName() + " Received Uninterested");
+	private void receiveUnchoke(byte[] message) {
+		choked = false;
+	}
+
+	/**
+	 * Handles an incoming choke message, sets the client choke flag to true.
+	 * Given its own method in case the need arises to add more functionality.
+	 * 
+	 * @param message
+	 */
+	private void receiveChoke(byte[] message) {
+		choked = true;
+	}
+
+	/**
+	 * Handles an incoming uninterested message form the peer, simply sets the
+	 * peer interested flag to false. Given its own method in case the need
+	 * arises to add more functionality
+	 * 
+	 * @param message
+	 */
+	private void receiveUninterested(byte[] message) {
+		peer.setInterested(false);
+	}
+
+	/**
+	 * Handles an incoming interested message, sets the peer's interested field
+	 * to true. Given its own method in case the need arises to add more
+	 * functionality.
+	 */
+	private void receiveInterested(byte[] message) {
 		peer.setInterested(true);
 	}
 
 	/**
 	 * Reads a bitfield message and sets the boolean values of peer_has_piece
-	 * accordingly
+	 * accordingly.
 	 * 
 	 * @param message
+	 *            byte array representing the bitfield message from the peer
 	 * @throws IOException
 	 */
 	private void receiveBitfield(byte[] message) throws IOException {
@@ -291,12 +307,10 @@ public class MessageHandler implements Runnable {
 			if (!has_piece[i] && peer.has_piece(i)) {
 				peer.sendInterested();
 				peer.setInteresting(false);
-				System.out.println(Thread.currentThread().getName() + " Sent Interested");
 				return;
 			}
 		}
 		peer.sendUninterested();
-		System.out.println(Thread.currentThread().getName() + " Sent Uninterested");
 	}
 
 	/**
@@ -304,16 +318,15 @@ public class MessageHandler implements Runnable {
 	 * piece and writes it to the file
 	 * 
 	 * @param message
+	 *            the byte array message from the peer
 	 * @throws IOException
 	 * @throws BtException
 	 */
 	private void receivePiece(byte[] message) throws IOException, BtException {
 		ByteBuffer parser = ByteBuffer.wrap(message);
 		Piece currPiece = pieces.get(parser.getInt(BtUtils.REQUEST_INDEX));
-		System.out.println(Thread.currentThread().getName() + " Piece Message " + " Received " + parser.getInt(1) + " offset " + parser.getInt(5));
 
 		currPiece.writeBlock(message);
-		System.out.println(Thread.currentThread().getName() + " Wrote Piece " + parser.getInt(1) + " offset " + parser.getInt(5));
 
 		// Add number of bytes to peer's uploaded counter
 		peer.uploaded(message.length - (BtUtils.PIECE_HEADER_SIZE + BtUtils.PREFIX_LENGTH));
@@ -322,25 +335,21 @@ public class MessageHandler implements Runnable {
 		currPiece.checkComplete();
 		if (currPiece.isComplete()) {
 			if (!currPiece.checkHash(torrentInfo.piece_hashes[currPiece.getIndex()].array())) {
-				System.err.println(Thread.currentThread().getName() + "Hash mismatch piece: " + currPiece.getIndex());
 				// If hash mismatch, clear piece and try again
 				currPiece.clearBlocks();
 				currPiece.incrementAttempts();
-				// If piece has reach the max attempts print error and
+				// If piece has reach the max attempts print error and return
 				if (currPiece.getDownloadAttempts() >= BtUtils.MAX_DOWNLOAD_ATTEMPTS) {
 					System.err.println("ERROR: Max download attempts reached, hash mismatch for piece #" + piece.getIndex());
 					return;
 				}
-			} else {
-				peer.sendHave(currPiece.getIndex());
-				System.out.println(Thread.currentThread().getName() + " sent have piece" + currPiece.getIndex());
 			}
 		}
 	}
 
 	/**
 	 * Handles an incoming request message, sends the request piece to the peer
-	 * if the piece is available
+	 * if the piece is available and the peer is not choked
 	 * 
 	 * @param message
 	 *            A request message from the peer
@@ -348,23 +357,22 @@ public class MessageHandler implements Runnable {
 	 */
 	private void receiveRequest(byte[] message) throws IOException {
 		ByteBuffer parser = ByteBuffer.wrap(message);
-		System.out.println(Thread.currentThread().getName() + " Received Request for Piece " + ByteBuffer.wrap(message).getInt(1));
+		// Check for request errors
 		if (parser.getInt(BtUtils.REQUEST_INDEX) < 0 || parser.getInt(BtUtils.REQUEST_INDEX) >= pieces.size()) {
 			System.err.println(Thread.currentThread().getName() + " ERROR: Peer Requested invalid piece disconnecting...");
 			peer.disconnect();
 			return;
 		}
 		if (!has_piece[parser.getInt(BtUtils.REQUEST_INDEX)]) {
-			System.err.println(Thread.currentThread().getName() + " Peer requested piece that client does not have");
+			System.err.println(Thread.currentThread().getName() + " ERROR: Peer requested piece that client does not have");
 			return;
 		}
 		if (peer.isChoked()) {
-			System.err.println(Thread.currentThread().getName() + " choked thread requested piece");
+			System.err.println(Thread.currentThread().getName() + " ERROR: choked peer requested piece");
 			return;
 		}
 		peer.sendPiece(pieces.get(parser.getInt(BtUtils.REQUEST_INDEX)), parser.getInt(BtUtils.REQUEST_OFFSET), BtUtils.REQUEST_SIZE);
 
-		System.out.println(Thread.currentThread().getName() + " Sent piece" + parser.getInt(BtUtils.REQUEST_INDEX));
 	}
 
 	/**
@@ -377,18 +385,16 @@ public class MessageHandler implements Runnable {
 	 */
 	private void receiveHave(byte[] message) throws IOException {
 		ByteBuffer parser = ByteBuffer.wrap(message);
-		System.out.println(Thread.currentThread().getName() + " Received Have for Piece " + parser.getInt(1));
 		int index = parser.getInt(1);
+		// check if have message is for a valid piece
 		if (index >= 0 && index < pieces.size()) {
 			if (!pieces.get(index).isComplete()) {
-				System.out.println(Thread.currentThread().getName() + " Sending interested message for piece " + index);
 				peer.sendInterested();
 				peer.setInteresting(true);
 				peer.setHasPiece(index);
 				pieces.get(index).incrementPeerCount();
 			}
 		} else {
-			System.err.println("Received have message with invalid piece index");
 			peer.disconnect();
 			wasted += message.length;
 		}
@@ -440,17 +446,16 @@ public class MessageHandler implements Runnable {
 		// keep complete set to true if all pieces are complete
 		status = Status.Seeding;
 		for (Piece piece : pieces) {
-			// If a piece has been completed send have message to peer then update has_piece array
+			// If there are any incomplete pieces set status to active
 			if (!piece.isComplete()) {
 				status = Status.Active;
 			}
+			// If a piece has been completed send have message to peer then update has_piece array
 			if (piece.isComplete() && !has_piece[piece.getIndex()]) {
 				try {
-					System.out.println(Thread.currentThread().getName() + " Sent have piece " + piece.getIndex());
 					peer.sendHave(piece.getIndex());
 				} catch (IOException e) {
-					// if sendHave fails don't update array so it will be resent
-					// on next pass
+					// if sendHave fails don't update array so it will be resent on next pass
 					continue;
 				}
 				has_piece[piece.getIndex()] = true;
@@ -458,28 +463,25 @@ public class MessageHandler implements Runnable {
 		}
 	}
 
+	/**
+	 * Attempts to connect to the given peer, if connection is successful or if
+	 * the peer is already connected, send appropriate have messages to the peer
+	 * 
+	 * @throws IOException
+	 */
 	private void connect() throws IOException {
 		// make sure peer is not null (shouldn't happen but just in case)
 		if (peer == null) {
-			System.err.println(Thread.currentThread().getName() + " recieved null peer");
-			return;
-		} else {
-			System.out.println(Thread.currentThread().getName() + "recieved peer: " + peer.getPeer_id());
-		}
-		// Return imediately if the peer is already connected
-		if (peer.isConnected()) {
 			return;
 		}
-		try {
+		// If not already connected, attempt to establish connection with the peer
+		if (!peer.isConnected()) {
 			if (!peer.establishConnection(info_hash, clientID)) {
 				System.err.println(Thread.currentThread().getName() + "ERROR: Failed to establish connection with peer " + peer.getPeer_id());
 				return;
 			}
-			System.out.println(Thread.currentThread().getName() + " Connected to peer " + peer.getPeer_id());
-		} catch (IOException e) {
-			System.err.println(e.getMessage());
-			return;
 		}
+
 		// send have messages to peer
 		for (Piece piece : pieces) {
 			if (piece.isComplete()) {
