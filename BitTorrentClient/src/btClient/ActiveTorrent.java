@@ -82,9 +82,6 @@ public class ActiveTorrent implements Runnable {
 		this.torrentInfo = torrentInfo;
 		this.communicationTracker = new CommunicationTracker(torrentInfo);
 		this.file = file;
-		peers = new ArrayList<Peer>();
-		threads = new ArrayList<Thread>();
-		message_handlers = new ArrayList<MessageHandler>();
 		createPieces();
 		gui_index = -1;
 		unchoked_peer_count = 0;
@@ -200,6 +197,9 @@ public class ActiveTorrent implements Runnable {
 	 */
 	public boolean isAlive() {
 		boolean isalive = false;
+		if(threads == null){
+			return false;
+		}
 		synchronized (threads) {
 			for (Thread thread : threads) {
 				if (thread.isAlive()) {
@@ -271,7 +271,10 @@ public class ActiveTorrent implements Runnable {
 		}
 		// Send tracker started message
 		communicationTracker.CommunicateWithTracker("started", getBytesCompleted());
+		// Initialize array lists
 		peers = communicationTracker.getPeersList();
+		threads = new ArrayList<Thread>(peers.size());
+		message_handlers = new ArrayList<MessageHandler>(peers.size());
 
 		// create a new MessageHandler and thread for each peer
 		synchronized (peers) {

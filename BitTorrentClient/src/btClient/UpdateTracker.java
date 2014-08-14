@@ -13,7 +13,6 @@ public class UpdateTracker extends TimerTask{
 	}
 	
 	public void run(){
-		System.out.println("========================Communication with the tracker again!!!!!========================");
 		ArrayList<Peer> updatesPeers;
 		try {
 			activeTorrent.getCommunicarionTracker().CommunicateWithTracker(" ", activeTorrent.getBytesCompleted());
@@ -35,7 +34,6 @@ public class UpdateTracker extends TimerTask{
 			if(!addMe){
 				//only add rutgers IP addresses. 
 				if(p.getIP().equals("128.6.171.130")||p.getIP().equals("128.6.171.131")){
-					System.out.println(p.getIP());
 					this.activeTorrent.addPeerToList(p);
 				}
 			}

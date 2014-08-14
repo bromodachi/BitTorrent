@@ -122,8 +122,7 @@ public class MessageHandler implements Runnable {
 		try {
 			connect();
 		} catch (IOException e2) {
-			e2.printStackTrace();
-			System.out.println(Thread.currentThread().getName() + "Failed to connect");
+			return;
 		}
 		// While connected : communication loop
 		while (peer.isConnected() && !peer.isClosed()) {
@@ -133,7 +132,6 @@ public class MessageHandler implements Runnable {
 				return;
 			}
 			updateHasPiece();
-			// debug();
 			if (!choked) {
 				// if piece is completed set it to null to get next piece
 				if (piece != null) {
@@ -148,7 +146,6 @@ public class MessageHandler implements Runnable {
 				if (piece == null && status == Status.Active) {
 					piece = getNextPiece();
 					if (piece == null) {
-						System.out.println(Thread.currentThread().getName() + " Selected null piece: Probably means none available");
 						/*
 						 * if the peer has no pieces we want and we are not
 						 * seeding then make sure peer is choked
@@ -160,37 +157,27 @@ public class MessageHandler implements Runnable {
 								peer.setChoked(true);
 								peer.setInteresting(false);
 								torrent.decrementUnchokedPeerCount();
-								System.err.println(Thread.currentThread().getName() + " Sent choke and uninterested " + peer.getPeer_id() + " " + peer.getIP());
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
 						}
-						try {
-							Thread.sleep(10000);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
 					}
 				}
-				// if piece is not null then the peer has a piece we are
-				// interested in
+				// if piece is not null then the peer has a piece we are interested in
 				if (piece != null) {
-					System.out.println(Thread.currentThread().getName() + " Set next piece " + piece.getIndex());
 					// get next non-downloaded block of the piece
 					block = piece.getNextBlock();
 					// if block is null then the piece is complete
 					if (block == null) {
-						System.err.println(Thread.currentThread().getName() + " Received null Block");
 						piece.checkComplete();
 					}
 				}
 				// Only attempt request if block is not null
 				if (block != null) {
 					try {
-						System.out.println(Thread.currentThread().getName() + " Requesting piece " + block.getPieceIndex() + " offset " + block.getOffset());
 						peer.sendRequest(block);
 					} catch (IOException e) {
-						System.err.println(Thread.currentThread().getName() + " Failed to send request");
+						// do nothing just move on
 					}
 					block = null;
 				}
@@ -518,8 +505,10 @@ public class MessageHandler implements Runnable {
 	public void kill() {
 		killme = true;
 	}
+
 	/**
 	 * Gets the current status of this {@link MessageHandler}
+	 * 
 	 * @return
 	 */
 	public Status getStatus() {

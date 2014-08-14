@@ -3,7 +3,6 @@ package btClient;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JProgressBar;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -268,36 +267,24 @@ public class GUIFrame extends JFrame implements ActionListener, Runnable {
 	 * Table
 	 */
 	private void updateStatus() {
-		JProgressBar progressBar = null;
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		for (ActiveTorrent torrent : torrents) {
 			model.setValueAt((Object) torrent.getStatus().toString(), torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_STATUS_COLUMN);
-			progressBar = (JProgressBar) model.getValueAt(torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_PROGRESS_COLUMN);
-			progressBar.setValue(torrent.getPercentComplete());
-			progressBar.repaint();
-			progressBar.validate();
+			model.setValueAt((Object) (Integer.toString(torrent.getPercentComplete()) + "%"), torrent.getGuiIndex(), BtUtils.TORRENT_TABLE_PROGRESS_COLUMN);
 		}
 	}
 
 	/**
 	 * Adds the given {@link ActiveTorrent} object to the GUI's Torrent Table
 	 * 
-	 * @param torrent The {@link ActiveTorrent} to be added to the torrent table
+	 * @param torrent
+	 *            The {@link ActiveTorrent} to be added to the torrent table
 	 */
 	public void addActiveTorrent(ActiveTorrent torrent) {
 		torrents.add(torrent);
-		JProgressBar progressBar = new JProgressBar(0, 100);
-		progressBar.setIndeterminate(true);
-		progressBar.setMinimumSize(new Dimension(10, 10));
-		progressBar.setAlignmentX((float) 0.5);
-		progressBar.setAlignmentY((float) 0.5);
-		progressBar.setValue(0);
-		progressBar.setStringPainted(true);
-		progressBar.setVisible(true);
-		progressBar.validate();
 		Object[] row = new Object[3];
 		row[0] = (Object) torrent.getFileName();
-		row[1] = (Object) progressBar;
+		row[1] = (Object) (Integer.toString(torrent.getPercentComplete()) + "%");
 		row[2] = (Object) torrent.getStatus().toString();
 		DefaultTableModel model = (DefaultTableModel) torrentTable.getModel();
 		torrent.setGuiIndex(model.getRowCount());
