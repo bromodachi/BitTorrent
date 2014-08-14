@@ -1,0 +1,58 @@
+Cody Goodman
+Conrado Uraga
+Other Guy
+
+
+**Features**
+Rarist-piece-first downloadind
+Chokes worst peer uploader while downloading
+Chokes worst peer downloader when seeding
+Implements optimistic peer unchoking
+Gorgeous GUI
+Capable of running multiple torrents at once
+Capable of stop/starting torrents at will
+Capable of adding partially downloaded torrents
+Capable of loading initial torrent from command line argument on startup
+
+** Program Flow **
+Program is executed (if command line arguments are included they are validated and if valid the torrent is added to the GUI in a stopped state) (RUBTClient)
+User clicks the add torrent button which prompts user to choose a .torrent file to load and a location to save the downloaded file (GUIFrame)
+GUI creates a new ActiveTorrent object containing the relevant data structures and objects for the torrent (communicationTracker, peers, pieces, timer, tasks...)
+User clicks the row of the torrent they wish to start, then click the start button (GUIFrame)
+GUIFrame creates a new thread and runs the ActiveTorrent object in it
+The ActiveTorrent gets the list of Peer objects from the communicationTracker which gets them from the tracker
+The piece objects are created and check for file completeness
+The ActiveTorrent creates a new MessageHandler for each Peer object (MessageHandler handles message logic, Peer objects handle peer related data and actually sending/fetching messages from the socket)
+GUIFrame Monitors the state of the ActiveTorrent and displays the status and percentage complete
+User can call stop/remove torrent to stop/remove the torrent at any time
+If user closes the window all ActiveTorrents are killed and the program exits
+
+
+
+** Bit more detailed description ** note check javadoc for detailed description of what each class does/is responsible for ****
+
+For this bittorrent project, the RUBTClient acts a validator and a client just to run the main program. When the user reaches the GUI, 
+it provides a friendly user interface to add, stop, remove, and exit the program without using command lines and able to run multiple torrents. 
+In the background, the GUI is actually a good amount of work. For each torrent that gets added, it creates an ActiveTorrent that then takes the torrent file, 
+passes it to the Communication tracker which decodes it and grabs all the information we need to initiate the multiple threads and timerTask such as the messagehandler, 
+updateTracker, etc. The messagehandler each gets their own peer and the activetorrent. The messagehandler does the majority of the work while working with helper classes or other objects 
+like the pieces and peer class. While the messageHandlers are communication with their own respective peer, the activetorrent class’ threads/timertask are doing their own jobs such as 
+choking a peer or communicating with the tracker while the client just focus on uploading and downloading. When we finish downloading, the activetorrent switches to seed mode and still 
+communicates with the peers so they can also download the pieces they need and complete the file.
+To get a more in depth understanding of the project, feel free to refer to the code for a better understanding.
+Brief overview:
+
+RUBTClient main function is to validate the args, if the user inputs any, and create a new ActiveTorrent class to run program, or simply run the gui. If the save file already exists, then we won’t run the program since the file already exists(we should make this seed instead…). 
+In the GUIFrrame class, it just displays the interface for the user to use and handles all inputs(via buttons) the user makes. It also displays the status of the torrent(if it’s completed, or still downloading). It provides a startTorrent method when the user hits add a torrent and adds a torrent, updateStatus that updates the status of the torrent, remove torrent if the user hits remove, and a general constructor that create the whole magic of the GUI. This is where the ActiveTorrent thread will get created(when the user hits start).
+ActiveTorrent is where the main magic happens. In the start method, it initiates multiple threads for the message handler, creates a timer for communicating with the torrent, a chokehandler to handle the optimistic choking handler which is a timer task, a keepAlive timer task to send keep alive messages to all the peers, and multiple threads of multi-handling which gets a peer and the active torrent . While it’s running an active, it updates its status. When the user hits the stop button in the gui, the torrent will stop downloading. The other methods are pretty self-explanatory and don’t really need any explanation. 
+In the MessageHandler class, this is where it just handles sending messages to a peer or handling messages from the peer. Handling messages is all in a switch case which routes to its appropriate method(if it’s a have, request, or a piece, etc). GetPiece implements the rarest algorithm that returns the rarest piece a peer has. This is dependent on the updateHasPiece()(to make sure it’s not requesting the same pieces).
+BencodingException is our own little exception class. If there’s an error, we simply throw this and prints out the error we encountered. 
+Block just exists to hold the relevant data to a block, to a certain piece’s index. 
+BTUtils is a utility class to hold data we will be constantly using such as p2pHandShaker, the ids for each message, and max lengths/size/interval. It does have one method called getFileBytes, but other than that, all it does it hold data such as ints, and mostly ints, to use later on.
+Communication Tracker just does what the name of the class suggested, to communicate with the tracker. It simply uses the bencoder to extract data from the torrent such as getting the time interval and getting the list of peers to communicate with and returns said peer list to activeTorrent.
+KeepAlive main purpose is just to send keepAlive messages to the list of peers have 2 minutes. This is accomplished by making it a timerTask.
+The peer class has all the send and read methods for the messages. When we want to send a message to that peer,  the switch statement in the messanger handler forwards it to the appropriate method and the peer will send it over TCP. Besides these methods, the establish connection is the first method that a peer visits when a peer object gets created. Establish connection is responsible for the handshake before exchanging messages.
+Now the piece class is responsible for writing its piece into the file saved to the disk of a user and check its completeness. Other than that, most are simple get and set methods for the piece. 
+PieceComparator is used in the rariest algo; for returning the piece that not many peers have.
+UpdateTracker extends a timerTask and communicates with the tracker at a fix interval indicated by the torrent file. 
+Bencoder2 was a given file to decode the torrent file given by the user. Thus no explanation is needed.
