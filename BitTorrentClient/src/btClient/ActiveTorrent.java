@@ -388,9 +388,6 @@ public class ActiveTorrent implements Runnable {
 	 * Creates a new piece object for the total number of pieces in the file to
 	 * be downloaded and adds them to the pieces array list
 	 * 
-	 * @param pieces
-	 *            ArrayList of piece objects
-	 * @param torrentInfo
 	 *            TorrentInfo object for the active download
 	 * @throws FileNotFoundException
 	 */
@@ -409,8 +406,6 @@ public class ActiveTorrent implements Runnable {
 
 	/**
 	 * Updates the status of this ActiveTorrent
-	 * 
-	 * @return
 	 */
 	private Status updateStatus() {
 		if (!isAlive()) {
